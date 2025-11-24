@@ -98,3 +98,38 @@ body {
   border-left: 4px solid #ddd;
   color: #666;
 }
+
+/* Responsive typography */
+@media (max-width: 768px) {
+  .markdown-content {
+    padding: 12px;
+    font-size: 14px;
+  }
+
+  .markdown-content pre {
+    padding: 10px;
+    overflow-x: auto;
+  }
+
+  .markdown-content code {
+    font-size: 0.85em;
+  }
+}
+
+@media (max-width: 480px) {
+  .markdown-content {
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  .markdown-content h1,
+  .markdown-content h2,
+  .markdown-content h3 {
+    margin: 12px 0 6px 0;
+  }
+
+  .markdown-content pre {
+    padding: 8px;
+    font-size: 12px;
+  }
+}

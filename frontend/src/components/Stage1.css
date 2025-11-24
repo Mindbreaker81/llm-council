@@ -75,3 +75,57 @@
   color: #374151;
   line-height: 1.7;
 }
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .stage {
+    padding: 16px;
+    margin: 16px 0;
+  }
+
+  .stage-title {
+    font-size: 16px;
+  }
+
+  .tabs {
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .tab {
+    padding: 8px 16px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .tab-content {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stage {
+    padding: 12px;
+    margin: 12px 0;
+  }
+
+  .stage-title {
+    font-size: 15px;
+  }
+
+  .tab {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .tab-content {
+    padding: 12px;
+    min-height: 150px;
+  }
+
+  .model-name {
+    font-size: 11px;
+  }
+}

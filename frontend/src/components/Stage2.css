@@ -166,3 +166,90 @@
   font-size: 12px;
   margin-left: 8px;
 }
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .stage2 h4 {
+    font-size: 15px;
+  }
+
+  .aggregate-rankings {
+    padding: 16px;
+  }
+
+  .aggregate-item {
+    gap: 12px;
+    padding: 10px 12px;
+  }
+
+  .rank-position {
+    font-size: 16px;
+    min-width: 24px;
+  }
+
+  .rank-model {
+    font-size: 13px;
+  }
+
+  .rank-score {
+    font-size: 12px;
+  }
+
+  .stage2 .tab {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .stage2 .tab-content {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .aggregate-rankings {
+    padding: 12px;
+  }
+
+  .aggregate-item {
+    gap: 8px;
+    padding: 8px 10px;
+    flex-wrap: wrap;
+  }
+
+  .rank-position {
+    font-size: 14px;
+    min-width: 20px;
+  }
+
+  .rank-model {
+    font-size: 12px;
+    flex: 1 1 100%;
+    order: 2;
+  }
+
+  .rank-score {
+    font-size: 11px;
+    order: 3;
+  }
+
+  .stage2 .tab {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .stage2 .tab-content {
+    padding: 12px;
+  }
+
+  .ranking-model {
+    font-size: 11px;
+  }
+
+  .ranking-content {
+    font-size: 14px;
+  }
+
+  .parsed-ranking li {
+    font-size: 12px;
+  }
+}

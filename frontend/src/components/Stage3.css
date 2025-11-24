@@ -28,3 +28,35 @@
   line-height: 1.8;
   font-size: 16px;
 }
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .final-response {
+    padding: 24px;
+  }
+
+  .final-text {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stage3 {
+    margin: 12px 0;
+  }
+
+  .final-response {
+    padding: 16px;
+  }
+
+  .chairman-label {
+    font-size: 12px;
+    padding: 4px 10px;
+    margin-bottom: 16px;
+  }
+
+  .final-text {
+    font-size: 14px;
+    line-height: 1.7;
+  }
+}
