@@ -1,11 +1,11 @@
 .stage2 {
-  background: #fafafa;
+  background: #fff;
 }
 
 .stage2 h4 {
-  margin: 20px 0 8px 0;
-  color: #333;
-  font-size: 14px;
+  margin: 24px 0 12px 0;
+  color: #1f2937;
+  font-size: 16px;
   font-weight: 600;
 }
 
@@ -14,140 +14,155 @@
 }
 
 .stage-description {
-  margin: 0 0 12px 0;
-  color: #666;
-  font-size: 13px;
-  line-height: 1.5;
+  margin: 0 0 16px 0;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .aggregate-rankings {
-  background: #f0f7ff;
-  padding: 16px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  border: 2px solid #d0e7ff;
+  background: #eff6ff;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  border: 1px solid #bfdbfe;
 }
 
 .aggregate-rankings h4 {
-  margin: 0 0 12px 0;
-  color: #2a7ae2;
-  font-size: 15px;
+  margin: 0 0 16px 0;
+  color: #1e40af;
+  font-size: 16px;
 }
 
 .aggregate-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .aggregate-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px;
+  gap: 16px;
+  padding: 12px 16px;
   background: #ffffff;
-  border-radius: 6px;
-  border: 1px solid #d0e7ff;
+  border-radius: 8px;
+  border: 1px solid #dbeafe;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .rank-position {
-  color: #2a7ae2;
+  color: #2563eb;
   font-weight: 700;
-  font-size: 16px;
-  min-width: 35px;
+  font-size: 18px;
+  min-width: 30px;
+  text-align: center;
 }
 
 .rank-model {
   flex: 1;
-  color: #333;
-  font-family: monospace;
+  color: #1f2937;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .rank-score {
-  color: #666;
+  color: #6b7280;
   font-size: 13px;
-  font-family: monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 .stage2 .tabs {
   display: flex;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 1px;
 }
 
 .stage2 .tab {
-  padding: 8px 16px;
-  background: #ffffff;
-  border: 1px solid #d0d0d0;
-  border-radius: 6px 6px 0 0;
-  color: #666;
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #6b7280;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 500;
   transition: all 0.2s;
+  margin-bottom: -1px;
 }
 
 .stage2 .tab:hover {
-  background: #f0f0f0;
-  color: #333;
-  border-color: #4a90e2;
+  color: #1f2937;
+  background: #f9fafb;
+  border-radius: 6px 6px 0 0;
 }
 
 .stage2 .tab.active {
-  background: #ffffff;
-  color: #4a90e2;
-  border-color: #4a90e2;
-  border-bottom-color: #ffffff;
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
   font-weight: 600;
+  background: transparent;
 }
 
 .stage2 .tab-content {
   background: #ffffff;
-  padding: 16px;
-  border-radius: 6px;
-  border: 1px solid #e0e0e0;
-  margin-bottom: 20px;
+  padding: 24px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 24px;
 }
 
 .ranking-model {
-  color: #888;
+  color: #6b7280;
   font-size: 12px;
-  font-family: monospace;
-  margin-bottom: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  margin-bottom: 16px;
+  background: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
 }
 
 .ranking-content {
-  color: #333;
-  line-height: 1.6;
-  font-size: 14px;
+  color: #374151;
+  line-height: 1.7;
+  font-size: 15px;
 }
 
 .parsed-ranking {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 2px solid #e0e0e0;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
 }
 
 .parsed-ranking strong {
-  color: #2a7ae2;
-  font-size: 13px;
+  color: #2563eb;
+  font-size: 14px;
+  display: block;
+  margin-bottom: 12px;
 }
 
 .parsed-ranking ol {
-  margin: 8px 0 0 0;
+  margin: 0;
   padding-left: 24px;
-  color: #333;
+  color: #374151;
 }
 
 .parsed-ranking li {
-  margin: 4px 0;
-  font-family: monospace;
+  margin: 8px 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 13px;
 }
 
 .rank-count {
-  color: #999;
+  color: #9ca3af;
   font-size: 12px;
+  margin-left: 8px;
 }

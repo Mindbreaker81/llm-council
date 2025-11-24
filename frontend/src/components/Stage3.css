@@ -1,25 +1,30 @@
 .stage3 {
-  background: #f0fff0;
-  border-color: #c8e6c8;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .final-response {
   background: #ffffff;
-  padding: 20px;
-  border-radius: 6px;
-  border: 1px solid #c8e6c8;
+  padding: 32px;
+  border-radius: 12px;
+  border: 1px solid #bbf7d0;
 }
 
 .chairman-label {
-  color: #2d8a2d;
-  font-size: 12px;
-  font-family: monospace;
-  margin-bottom: 12px;
+  color: #15803d;
+  font-size: 13px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  margin-bottom: 20px;
   font-weight: 600;
+  background: #dcfce7;
+  padding: 6px 12px;
+  border-radius: 6px;
+  display: inline-block;
 }
 
 .final-text {
-  color: #333;
-  line-height: 1.7;
-  font-size: 15px;
+  color: #1f2937;
+  line-height: 1.8;
+  font-size: 16px;
 }
