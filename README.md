@@ -16,25 +16,26 @@ This project was 99% vibe coded as a fun Saturday hack because I wanted to explo
 
 ## Setup
 
-### 1. Install Dependencies
+### 1. Configure API Key
 
-The project uses [uv](https://docs.astral.sh/uv/) for project management.
+Copy the example environment file and add your OpenRouter API key:
 
-**Backend:**
+**Linux/Mac:**
 ```bash
-uv sync
+cp .env.example .env
 ```
 
-**Frontend:**
-```bash
-cd frontend
-npm install
-cd ..
+**Windows (PowerShell):**
+```powershell
+Copy-Item .env.example .env
 ```
 
-### 2. Configure API Key
+**Windows (CMD):**
+```cmd
+copy .env.example .env
+```
 
-Create a `.env` file in the project root:
+Then edit `.env` and add your API key:
 
 ```bash
 OPENROUTER_API_KEY=sk-or-v1-...
@@ -42,7 +43,7 @@ OPENROUTER_API_KEY=sk-or-v1-...
 
 Get your API key at [openrouter.ai](https://openrouter.ai/). Make sure to purchase the credits you need, or sign up for automatic top up.
 
-### 3. Configure Models (Optional)
+### 2. Configure Models (Optional)
 
 The application supports three types of councils:
 
@@ -61,6 +62,9 @@ COUNCIL_MODELS_PREMIUM = [
     "x-ai/grok-4",
 ]
 
+# Premium Chairman model - synthesizes final response
+CHAIRMAN_MODEL_PREMIUM = "google/gemini-3-pro-preview"
+
 # Economic Council
 COUNCIL_MODELS_ECONOMIC = [
     "qwen/qwen3-235b-a22b-thinking-2507",
@@ -69,6 +73,9 @@ COUNCIL_MODELS_ECONOMIC = [
     "nousresearch/hermes-4-70b",
 ]
 
+# Economic Chairman model - synthesizes final response
+CHAIRMAN_MODEL_ECONOMIC = "deepseek/deepseek-v3.1-terminus"
+
 # Free Council
 COUNCIL_MODELS_FREE = [
     "mistralai/mistral-small-24b-instruct-2501:free",
@@ -76,6 +83,9 @@ COUNCIL_MODELS_FREE = [
     "z-ai/glm-4.5-air:free",
     "deepseek/deepseek-r1-distill-qwen-32b",
 ]
+
+# Free Chairman model - synthesizes final response
+CHAIRMAN_MODEL_FREE = "deepseek/deepseek-r1-distill-llama-70b:free"
 ```
 
 You can select the council type when sending a message. The selected council type is displayed in each assistant response and in the conversation list.
@@ -83,18 +93,62 @@ You can select the council type when sending a message. The selected council typ
 ## Running the Application
 
 **Option 1: Use Docker Compose (Recommended)**
+
+Works on Windows, macOS, and Linux. No need to install dependencies manually - Docker handles everything during the build process.
+
+**Prerequisites:**
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
+
 ```bash
 docker compose up -d --build
 ```
 
 Then open http://localhost:5174 in your browser (backend on port 8001, frontend on port 5174).
 
+**Port Configuration:**
+- **Backend**: Port 8001
+- **Frontend**: Port 5174 (mapped from container port 5173)
+
+If you have port conflicts, you can modify the ports in `docker-compose.yml`. See the [Port Configuration](#port-configuration) section below for details.
+
 **Option 2: Use the start script**
+
+First, install dependencies:
+
+**Backend:**
+```bash
+uv sync
+```
+
+**Frontend:**
+```bash
+cd frontend
+npm install
+cd ..
+```
+
+Then run the start script:
 ```bash
 ./start.sh
 ```
 
 **Option 3: Run manually**
+
+First, install dependencies (same as Option 2):
+
+**Backend:**
+```bash
+uv sync
+```
+
+**Frontend:**
+```bash
+cd frontend
+npm install
+cd ..
+```
+
+Then run each service separately:
 
 Terminal 1 (Backend):
 ```bash
@@ -147,6 +201,84 @@ Then open http://localhost:5173 in your browser.
 - **Reasoning Token Extraction**: Automatically extracts final content from reasoning models (DeepSeek R1) while preserving original for transparency
 - **Context Summarization**: For free models with 32k token limits, Stage 2 results are automatically summarized before passing to the Chairman
 - **Error Handling**: Failed models are excluded from results, and free models automatically try paid fallback versions
+
+## Port Configuration
+
+### Checking for Port Conflicts
+
+Before running the application, you can check if ports 8001 and 5174 are already in use:
+
+**Using the provided scripts:**
+
+**Linux/Mac:**
+```bash
+./check-ports.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+.\check-ports.ps1
+```
+
+**Manual check:**
+
+**Linux/Mac:**
+```bash
+# Check port 8001 (backend)
+lsof -i :8001
+# or
+netstat -an | grep 8001
+
+# Check port 5174 (frontend)
+lsof -i :5174
+# or
+netstat -an | grep 5174
+```
+
+**Windows (PowerShell):**
+```powershell
+# Check port 8001 (backend)
+netstat -ano | findstr :8001
+
+# Check port 5174 (frontend)
+netstat -ano | findstr :5174
+```
+
+**Windows (CMD):**
+```cmd
+netstat -ano | findstr :8001
+netstat -ano | findstr :5174
+```
+
+### Changing Ports
+
+If you need to change the ports due to conflicts, edit `docker-compose.yml`:
+
+```yaml
+services:
+  backend:
+    ports:
+      - "YOUR_BACKEND_PORT:8001"  # Change YOUR_BACKEND_PORT to your desired port
+  frontend:
+    ports:
+      - "YOUR_FRONTEND_PORT:5173"  # Change YOUR_FRONTEND_PORT to your desired port
+```
+
+You'll also need to update the frontend API configuration in `frontend/src/api.js` if you change the backend port:
+
+```javascript
+const getApiBase = () => {
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  return `${protocol}//${hostname}:YOUR_BACKEND_PORT`;  // Update this port
+};
+```
+
+After making changes, rebuild and restart:
+```bash
+docker compose down
+docker compose up -d --build
+```
 
 ## Tech Stack
 

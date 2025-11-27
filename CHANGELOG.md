@@ -2,6 +2,37 @@
 
 Todos los cambios notables en este proyecto serán documentados en este archivo.
 
+## [2.1.0] - 2025-11-27
+
+### Añadido
+- **Archivo `.env.example`**: Plantilla de configuración para facilitar el setup
+- **Soporte para Tailscale y acceso remoto**: Configuración CORS mejorada para permitir acceso desde IPs remotas y dominios Tailscale
+- **Variables de entorno para CORS**: Soporte para `ALLOWED_ORIGINS` para agregar orígenes personalizados
+- **Configuración Vite mejorada**: Configurado para aceptar conexiones desde cualquier IP (`host: '0.0.0.0'`)
+
+### Mejorado
+- **Documentación README**: 
+  - Agregada información sobre modelos CHAIRMAN para cada tipo de consejo
+  - Instrucciones para Windows (PowerShell y CMD)
+  - Aclaración sobre dependencias con Docker (no necesarias)
+  - Documentación sobre acceso remoto y Tailscale
+- **Seguridad CORS**: Configuración más segura con orígenes específicos en lugar de `["*"]` (aunque mantiene localhost por defecto)
+- **Dockerfile backend**: Limpiado para eliminar referencia a archivo eliminado
+
+### Eliminado
+- **CLAUDE.md**: Documentación técnica interna innecesaria para usuarios
+- **frontend/README.md**: README genérico de Vite sin información relevante
+- **modelos.md**: Archivo duplicado/innecesario
+
+### Cambios Técnicos
+- **backend/main.py**: 
+  - CORS configurado con lista de orígenes permitidos (localhost, Tailscale)
+  - Soporte para variable de entorno `ALLOWED_ORIGINS`
+  - Comentarios de advertencia sobre seguridad en producción
+- **frontend/vite.config.js**: 
+  - Configurado `host: '0.0.0.0'` para aceptar conexiones externas
+  - Puerto 5173 configurado explícitamente
+
 ## [2.0.0] - 2025-01-27
 
 ### Añadido

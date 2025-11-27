@@ -7,7 +7,6 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 # Copy project files
 COPY pyproject.toml .
-COPY CLAUDE.md .
 COPY README.md .
 COPY backend/ backend/
 

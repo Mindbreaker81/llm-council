@@ -15,10 +15,39 @@ from .config import COUNCIL_TYPE_PREMIUM, COUNCIL_TYPE_ECONOMIC, COUNCIL_TYPE_FR
 
 app = FastAPI(title="LLM Council API")
 
-# Enable CORS for local development
+# CORS configuration with environment variable support
+# Default origins include localhost for local development
+# Set ALLOWED_ORIGINS env var to override (comma-separated list)
+import os
+default_origins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+    # Tailscale support
+    "http://100.126.204.86:5174",
+    "http://quimserver.tail19aa19.ts.net:5174",
+    "https://quimserver.tail19aa19.ts.net:5174",
+]
+
+# Get additional origins from environment variable
+env_origins = os.getenv("ALLOWED_ORIGINS", "")
+if env_origins:
+    # Split by comma and add to default origins
+    additional_origins = [origin.strip() for origin in env_origins.split(",") if origin.strip()]
+    default_origins.extend(additional_origins)
+
+# Remove duplicates while preserving order
+seen = set()
+allowed_origins = []
+for origin in default_origins:
+    if origin not in seen:
+        seen.add(origin)
+        allowed_origins.append(origin)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
