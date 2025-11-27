@@ -201,6 +201,12 @@ Then open http://localhost:5173 in your browser.
 - **Reasoning Token Extraction**: Automatically extracts final content from reasoning models (DeepSeek R1) while preserving original for transparency
 - **Context Summarization**: For free models with 32k token limits, Stage 2 results are automatically summarized before passing to the Chairman
 - **Error Handling**: Failed models are excluded from results, and free models automatically try paid fallback versions
+- **PDF Export**: Export complete conversations to PDF with selectable text
+  - Includes all user messages and assistant responses
+  - Stage 1: All individual model responses (without reasoning tokens)
+  - Stage 2: Complete peer evaluations, extracted rankings, and aggregate rankings table
+  - Stage 3: Final Chairman response
+  - Click the "Export PDF" button at the end of any conversation
 
 ## Port Configuration
 
@@ -284,6 +290,7 @@ docker compose up -d --build
 
 - **Backend:** FastAPI (Python 3.10+), async httpx, OpenRouter API
 - **Frontend:** React + Vite, react-markdown for rendering
+- **PDF Generation:** pdfmake for generating PDFs with selectable text
 - **Storage:** JSON files in `data/conversations/`
 - **Package Management:** uv for Python, npm for JavaScript
 - **Containerization:** Docker Compose for easy deployment

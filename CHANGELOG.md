@@ -2,6 +2,43 @@
 
 Todos los cambios notables en este proyecto serán documentados en este archivo.
 
+## [2.2.0] - 2025-11-27
+
+### Añadido
+- **Exportación a PDF con texto seleccionable**: Nueva funcionalidad para exportar conversaciones completas a PDF
+  - Botón "Exportar PDF" al final de cada conversación
+  - Incluye todos los mensajes del usuario y respuestas del asistente
+  - Stage 1: Todas las respuestas individuales de cada modelo (sin reasoning tokens)
+  - Stage 2: Todas las evaluaciones completas, rankings extraídos y tabla de rankings agregados
+  - Stage 3: Respuesta final del Chairman
+  - Formato legible con colores diferenciados por stage
+  - **PDFs generados con texto seleccionable y buscable** (no como imágenes)
+  - Nombre de archivo automático: `llm-council-[titulo]-[fecha].pdf`
+
+### Mejorado
+- **Generación de PDF**: Migrado de html2canvas/jsPDF a pdfmake para generar PDFs con texto real en lugar de imágenes
+  - Texto completamente seleccionable y buscable
+  - Archivos más pequeños
+  - Mejor calidad de renderizado
+  - Sin problemas de gráficos partidos o mezcla de colores
+
+### Dependencias
+- **pdfmake** (v0.2.11): Librería para generar PDFs con texto seleccionable
+- **marked** (v14.1.0): Conversión de Markdown a texto plano para el PDF
+
+### Eliminado
+- **html2pdf.js** (v0.10.2): Reemplazado por pdfmake
+- **html2canvas** (v1.4.1): Ya no necesario
+- **jspdf** (v2.5.2): Ya no necesario
+
+### Archivos Nuevos
+- `frontend/src/utils/pdfExport.js`: Utilidad para generar PDFs de conversaciones con pdfmake
+
+### Archivos Modificados
+- `frontend/package.json`: Actualizadas dependencias (pdfmake reemplaza html2pdf.js, html2canvas, jspdf)
+- `frontend/src/components/ChatInterface.jsx`: Agregado botón de exportar PDF al final de la conversación y lógica de exportación
+- `frontend/src/components/ChatInterface.css`: Estilos para el botón de exportar PDF
+
 ## [2.1.0] - 2025-11-27
 
 ### Añadido

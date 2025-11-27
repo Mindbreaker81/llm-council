@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import Stage1 from './Stage1';
 import Stage2 from './Stage2';
 import Stage3 from './Stage3';
+import { exportConversationToPDF } from '../utils/pdfExport';
 import './ChatInterface.css';
 
 export default function ChatInterface({
@@ -14,6 +15,7 @@ export default function ChatInterface({
   const [councilType, setCouncilType] = useState(
     conversation?.council_type || 'premium'
   );
+  const [isExporting, setIsExporting] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -44,6 +46,23 @@ export default function ChatInterface({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    if (!conversation || !conversation.messages || conversation.messages.length === 0) {
+      alert('No hay mensajes para exportar');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      await exportConversationToPDF(conversation);
+    } catch (error) {
+      console.error('Error al exportar PDF:', error);
+      alert('Error al generar el PDF: ' + error.message);
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -135,6 +154,28 @@ export default function ChatInterface({
         )}
 
         <div ref={messagesEndRef} />
+        
+        {conversation.messages.length > 0 && (
+          <div className="export-pdf-container">
+            <button
+              className="export-pdf-button"
+              onClick={handleExportPDF}
+              disabled={isExporting || isLoading}
+              title="Exportar conversación a PDF"
+            >
+              {isExporting ? (
+                <>
+                  <span className="spinner-small"></span>
+                  Generando PDF...
+                </>
+              ) : (
+                <>
+                  📄 Exportar PDF
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       <form className="input-form" onSubmit={handleSubmit}>
