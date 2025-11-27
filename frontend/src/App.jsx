@@ -43,9 +43,10 @@ function App() {
 
   const handleNewConversation = async () => {
     try {
-      const newConv = await api.createConversation();
+      // Use premium as default when creating new conversation
+      const newConv = await api.createConversation('premium');
       setConversations([
-        { id: newConv.id, created_at: newConv.created_at, message_count: 0 },
+        { id: newConv.id, created_at: newConv.created_at, message_count: 0, council_type: newConv.council_type },
         ...conversations,
       ]);
       setCurrentConversationId(newConv.id);
@@ -77,7 +78,7 @@ function App() {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  const handleSendMessage = async (content) => {
+  const handleSendMessage = async (content, councilType) => {
     if (!currentConversationId) return;
 
     setIsLoading(true);
@@ -96,6 +97,7 @@ function App() {
         stage2: null,
         stage3: null,
         metadata: null,
+        council_type: councilType,
         loading: {
           stage1: false,
           stage2: false,
@@ -111,85 +113,121 @@ function App() {
 
       // Send message with streaming
       await api.sendMessageStream(currentConversationId, content, (eventType, event) => {
-        switch (eventType) {
-          case 'stage1_start':
-            setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.loading.stage1 = true;
-              return { ...prev, messages };
-            });
-            break;
+        try {
+          switch (eventType) {
+            case 'stage1_start':
+              setCurrentConversation((prev) => {
+                if (!prev || !prev.messages) return prev;
+                const messages = [...prev.messages];
+                const lastMsg = messages[messages.length - 1];
+                if (lastMsg) {
+                  lastMsg.loading = lastMsg.loading || {};
+                  lastMsg.loading.stage1 = true;
+                }
+                return { ...prev, messages };
+              });
+              break;
 
-          case 'stage1_complete':
-            setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.stage1 = event.data;
-              lastMsg.loading.stage1 = false;
-              return { ...prev, messages };
-            });
-            break;
+            case 'stage1_complete':
+              console.log('Stage 1 complete event received:', event.data);
+              setCurrentConversation((prev) => {
+                if (!prev || !prev.messages) return prev;
+                const messages = [...prev.messages];
+                const lastMsg = messages[messages.length - 1];
+                if (lastMsg) {
+                  lastMsg.stage1 = event.data || [];
+                  lastMsg.loading = lastMsg.loading || {};
+                  lastMsg.loading.stage1 = false;
+                }
+                console.log('Updated message with stage1:', lastMsg?.stage1);
+                return { ...prev, messages };
+              });
+              break;
 
-          case 'stage2_start':
-            setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.loading.stage2 = true;
-              return { ...prev, messages };
-            });
-            break;
+            case 'stage2_start':
+              setCurrentConversation((prev) => {
+                if (!prev || !prev.messages) return prev;
+                const messages = [...prev.messages];
+                const lastMsg = messages[messages.length - 1];
+                if (lastMsg) {
+                  lastMsg.loading = lastMsg.loading || {};
+                  lastMsg.loading.stage2 = true;
+                }
+                return { ...prev, messages };
+              });
+              break;
 
-          case 'stage2_complete':
-            setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.stage2 = event.data;
-              lastMsg.metadata = event.metadata;
-              lastMsg.loading.stage2 = false;
-              return { ...prev, messages };
-            });
-            break;
+            case 'stage2_complete':
+              setCurrentConversation((prev) => {
+                if (!prev || !prev.messages) return prev;
+                const messages = [...prev.messages];
+                const lastMsg = messages[messages.length - 1];
+                if (lastMsg) {
+                  lastMsg.stage2 = event.data || [];
+                  lastMsg.metadata = event.metadata || {};
+                  lastMsg.council_type = event.metadata?.council_type || councilType;
+                  lastMsg.loading = lastMsg.loading || {};
+                  lastMsg.loading.stage2 = false;
+                }
+                return { ...prev, messages };
+              });
+              break;
 
-          case 'stage3_start':
-            setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.loading.stage3 = true;
-              return { ...prev, messages };
-            });
-            break;
+            case 'stage3_start':
+              setCurrentConversation((prev) => {
+                if (!prev || !prev.messages) return prev;
+                const messages = [...prev.messages];
+                const lastMsg = messages[messages.length - 1];
+                if (lastMsg) {
+                  lastMsg.loading = lastMsg.loading || {};
+                  lastMsg.loading.stage3 = true;
+                }
+                return { ...prev, messages };
+              });
+              break;
 
-          case 'stage3_complete':
-            setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.stage3 = event.data;
-              lastMsg.loading.stage3 = false;
-              return { ...prev, messages };
-            });
-            break;
+            case 'stage3_complete':
+              setCurrentConversation((prev) => {
+                if (!prev || !prev.messages) return prev;
+                const messages = [...prev.messages];
+                const lastMsg = messages[messages.length - 1];
+                if (lastMsg) {
+                  lastMsg.stage3 = event.data || {};
+                  lastMsg.loading = lastMsg.loading || {};
+                  lastMsg.loading.stage3 = false;
+                }
+                return { ...prev, messages };
+              });
+              break;
 
-          case 'title_complete':
-            // Reload conversations to get updated title
-            loadConversations();
-            break;
+            case 'title_complete':
+              setCurrentConversation((prev) => ({
+                ...prev,
+                title: event.data?.title || prev?.title,
+              }));
+              loadConversations();
+              setIsLoading(false);
+              break;
 
-          case 'complete':
-            // Stream complete, reload conversations list
-            loadConversations();
-            setIsLoading(false);
-            break;
+            case 'complete':
+              // Stream complete, reload conversations list
+              loadConversations();
+              setIsLoading(false);
+              break;
 
-          case 'error':
-            console.error('Stream error:', event.message);
-            setIsLoading(false);
-            break;
+            case 'error':
+              console.error('Stream error:', event.message);
+              setIsLoading(false);
+              break;
 
-          default:
-            console.log('Unknown event type:', eventType);
+            default:
+              console.log('Unknown event type:', eventType);
+          }
+        } catch (error) {
+          console.error('Error processing SSE event:', error, eventType, event);
+          setIsLoading(false);
         }
-      });
+      }, councilType);
     } catch (error) {
       console.error('Failed to send message:', error);
       // Remove optimistic messages on error

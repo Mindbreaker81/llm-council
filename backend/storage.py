@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from pathlib import Path
-from .config import DATA_DIR
+from .config import DATA_DIR, COUNCIL_TYPE_PREMIUM
 
 
 def ensure_data_dir():
@@ -18,12 +18,13 @@ def get_conversation_path(conversation_id: str) -> str:
     return os.path.join(DATA_DIR, f"{conversation_id}.json")
 
 
-def create_conversation(conversation_id: str) -> Dict[str, Any]:
+def create_conversation(conversation_id: str, council_type: str = COUNCIL_TYPE_PREMIUM) -> Dict[str, Any]:
     """
     Create a new conversation.
 
     Args:
         conversation_id: Unique identifier for the conversation
+        council_type: Type of council to use ("premium" or "economic")
 
     Returns:
         New conversation dict
@@ -34,7 +35,8 @@ def create_conversation(conversation_id: str) -> Dict[str, Any]:
         "id": conversation_id,
         "created_at": datetime.utcnow().isoformat(),
         "title": "New Conversation",
-        "messages": []
+        "messages": [],
+        "council_type": council_type
     }
 
     # Save to file
@@ -98,7 +100,8 @@ def list_conversations() -> List[Dict[str, Any]]:
                     "id": data["id"],
                     "created_at": data["created_at"],
                     "title": data.get("title", "New Conversation"),
-                    "message_count": len(data["messages"])
+                    "message_count": len(data["messages"]),
+                    "council_type": data.get("council_type", "premium")
                 })
 
     # Sort by creation time, newest first
@@ -131,7 +134,8 @@ def add_assistant_message(
     conversation_id: str,
     stage1: List[Dict[str, Any]],
     stage2: List[Dict[str, Any]],
-    stage3: Dict[str, Any]
+    stage3: Dict[str, Any],
+    council_type: Optional[str] = None
 ):
     """
     Add an assistant message with all 3 stages to a conversation.
@@ -141,17 +145,23 @@ def add_assistant_message(
         stage1: List of individual model responses
         stage2: List of model rankings
         stage3: Final synthesized response
+        council_type: Type of council used for this message
     """
     conversation = get_conversation(conversation_id)
     if conversation is None:
         raise ValueError(f"Conversation {conversation_id} not found")
 
-    conversation["messages"].append({
+    message = {
         "role": "assistant",
         "stage1": stage1,
         "stage2": stage2,
         "stage3": stage3
-    })
+    }
+    
+    if council_type:
+        message["council_type"] = council_type
+
+    conversation["messages"].append(message)
 
     save_conversation(conversation)
 

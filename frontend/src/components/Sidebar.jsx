@@ -44,6 +44,11 @@ export default function Sidebar({
                 </div>
                 <div className="conversation-meta">
                   {conv.message_count} messages
+                  {conv.council_type && (
+                    <span className="council-type-badge">
+                      {conv.council_type === 'premium' ? '💎' : conv.council_type === 'economic' ? '💰' : '🆓'} {conv.council_type}
+                    </span>
+                  )}
                 </div>
               </div>
               <button

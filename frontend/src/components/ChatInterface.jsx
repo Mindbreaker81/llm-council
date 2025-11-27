@@ -11,6 +11,9 @@ export default function ChatInterface({
   isLoading,
 }) {
   const [input, setInput] = useState('');
+  const [councilType, setCouncilType] = useState(
+    conversation?.council_type || 'premium'
+  );
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -21,10 +24,17 @@ export default function ChatInterface({
     scrollToBottom();
   }, [conversation]);
 
+  useEffect(() => {
+    // Update council type when conversation changes
+    if (conversation?.council_type) {
+      setCouncilType(conversation.council_type);
+    }
+  }, [conversation]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (input.trim() && !isLoading) {
-      onSendMessage(input);
+      onSendMessage(input, councilType);
       setInput('');
     }
   };
@@ -70,7 +80,14 @@ export default function ChatInterface({
                 </div>
               ) : (
                 <div className="assistant-message">
-                  <div className="message-label">LLM Council</div>
+                  <div className="message-label">
+                    LLM Council
+                    {msg.council_type && (
+                      <span className="council-type-indicator">
+                        {msg.council_type === 'premium' ? '💎 Premium' : msg.council_type === 'economic' ? '💰 Económico' : '🆓 Free'}
+                      </span>
+                    )}
+                  </div>
 
                   {/* Stage 1 */}
                   {msg.loading?.stage1 && (
@@ -120,8 +137,46 @@ export default function ChatInterface({
         <div ref={messagesEndRef} />
       </div>
 
-      {conversation.messages.length === 0 && (
-        <form className="input-form" onSubmit={handleSubmit}>
+      <form className="input-form" onSubmit={handleSubmit}>
+        <div className="council-type-selector">
+          <label>Tipo de Consejo:</label>
+          <div className="council-type-options">
+            <label className="council-type-option">
+              <input
+                type="radio"
+                name="councilType"
+                value="premium"
+                checked={councilType === 'premium'}
+                onChange={(e) => setCouncilType(e.target.value)}
+                disabled={isLoading}
+              />
+              <span>Premium</span>
+            </label>
+            <label className="council-type-option">
+              <input
+                type="radio"
+                name="councilType"
+                value="economic"
+                checked={councilType === 'economic'}
+                onChange={(e) => setCouncilType(e.target.value)}
+                disabled={isLoading}
+              />
+              <span>Económico</span>
+            </label>
+            <label className="council-type-option">
+              <input
+                type="radio"
+                name="councilType"
+                value="free"
+                checked={councilType === 'free'}
+                onChange={(e) => setCouncilType(e.target.value)}
+                disabled={isLoading}
+              />
+              <span>Free</span>
+            </label>
+          </div>
+        </div>
+        <div className="input-form-row">
           <textarea
             className="message-input"
             placeholder="Ask your question... (Shift+Enter for new line, Enter to send)"
@@ -138,8 +193,8 @@ export default function ChatInterface({
           >
             Send
           </button>
-        </form>
-      )}
+        </div>
+      </form>
     </div>
   );
 }

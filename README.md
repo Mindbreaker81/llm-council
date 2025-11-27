@@ -44,27 +44,57 @@ Get your API key at [openrouter.ai](https://openrouter.ai/). Make sure to purcha
 
 ### 3. Configure Models (Optional)
 
-Edit `backend/config.py` to customize the council:
+The application supports three types of councils:
+
+- **Premium**: High-performance models (GPT-5.1, Gemini 3 Pro, Claude Opus 4.5, Grok 4)
+- **Economic**: Cost-effective models with good performance (DeepSeek V3.1, Qwen3, Llama 3.3, etc.)
+- **Free**: Free models with automatic fallback to paid versions if unavailable
+
+Edit `backend/config.py` to customize the council models for each type:
 
 ```python
-COUNCIL_MODELS = [
+# Premium Council
+COUNCIL_MODELS_PREMIUM = [
     "openai/gpt-5.1",
     "google/gemini-3-pro-preview",
-    "anthropic/claude-sonnet-4.5",
+    "anthropic/claude-opus-4.5",
     "x-ai/grok-4",
 ]
 
-CHAIRMAN_MODEL = "google/gemini-3-pro-preview"
+# Economic Council
+COUNCIL_MODELS_ECONOMIC = [
+    "qwen/qwen3-235b-a22b-thinking-2507",
+    "meta-llama/llama-3.3-70b-instruct",
+    "deepseek/deepseek-r1-0528-qwen3-8b",
+    "nousresearch/hermes-4-70b",
+]
+
+# Free Council
+COUNCIL_MODELS_FREE = [
+    "mistralai/mistral-small-24b-instruct-2501:free",
+    "google/gemini-2.5-flash:free",
+    "z-ai/glm-4.5-air:free",
+    "deepseek/deepseek-r1-distill-qwen-32b",
+]
 ```
+
+You can select the council type when sending a message. The selected council type is displayed in each assistant response and in the conversation list.
 
 ## Running the Application
 
-**Option 1: Use the start script**
+**Option 1: Use Docker Compose (Recommended)**
+```bash
+docker compose up -d --build
+```
+
+Then open http://localhost:5174 in your browser (backend on port 8001, frontend on port 5174).
+
+**Option 2: Use the start script**
 ```bash
 ./start.sh
 ```
 
-**Option 2: Run manually**
+**Option 3: Run manually**
 
 Terminal 1 (Backend):
 ```bash
@@ -79,9 +109,49 @@ npm run dev
 
 Then open http://localhost:5173 in your browser.
 
+## Usage
+
+1. **Create a Conversation**: Click "+ New Conversation" in the sidebar
+2. **Select Council Type**: Choose Premium, Economic, or Free using the selector above the message input
+3. **Ask a Question**: Type your question and send it
+4. **View Results**: 
+   - Stage 1 shows individual responses from each model
+   - Stage 2 shows peer rankings and evaluations
+   - Stage 3 shows the final synthesized answer
+   - Each response displays the council type used (💎 Premium, 💰 Economic, 🆓 Free)
+
+## Features
+
+- **Three Council Types**: Choose between Premium, Economic, or Free models when sending messages
+- **Council Type Display**: Each response shows which council type was used (💎 Premium, 💰 Economic, 🆓 Free)
+- **Automatic Fallback**: Free models automatically fallback to paid versions if unavailable
+- **Reasoning Token Handling**: Properly handles reasoning tokens from models like DeepSeek R1
+- **Context Management**: Automatically summarizes large contexts for models with token limits (32k for free, 128k for economic)
+- **Transparency**: View original reasoning tokens while saving tokens in internal stages
+- **Per-Message Council Selection**: Choose different council types for different messages in the same conversation
+
+## Technical Details
+
+### Council Type Selection
+- Council type is selected per message, not per conversation
+- You can use different council types for different messages in the same conversation
+- The council type used is displayed in each assistant response
+- Conversations show the council type in the sidebar list
+
+### Model Configuration
+- **Premium Models**: High-performance models for best quality
+- **Economic Models**: Cost-effective alternatives with good performance
+- **Free Models**: Free tier models with automatic fallback to paid versions on failure
+
+### Advanced Features
+- **Reasoning Token Extraction**: Automatically extracts final content from reasoning models (DeepSeek R1) while preserving original for transparency
+- **Context Summarization**: For free models with 32k token limits, Stage 2 results are automatically summarized before passing to the Chairman
+- **Error Handling**: Failed models are excluded from results, and free models automatically try paid fallback versions
+
 ## Tech Stack
 
 - **Backend:** FastAPI (Python 3.10+), async httpx, OpenRouter API
 - **Frontend:** React + Vite, react-markdown for rendering
 - **Storage:** JSON files in `data/conversations/`
 - **Package Management:** uv for Python, npm for JavaScript
+- **Containerization:** Docker Compose for easy deployment

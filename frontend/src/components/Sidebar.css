@@ -52,6 +52,48 @@
   letter-spacing: -0.5px;
 }
 
+.council-type-selector-sidebar {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #2d2d2d;
+  border-radius: 8px;
+  border: 1px solid #404040;
+}
+
+.council-type-selector-sidebar label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #b0b0b0;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.council-type-options-sidebar {
+  display: flex;
+  gap: 12px;
+}
+
+.council-type-option-sidebar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #d0d0d0;
+  user-select: none;
+}
+
+.council-type-option-sidebar input[type="radio"] {
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.council-type-option-sidebar span {
+  font-weight: 500;
+}
+
 .new-conversation-btn {
   width: 100%;
   padding: 12px;
@@ -155,4 +197,18 @@
 .conversation-meta {
   color: #888;
   font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.council-type-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: #2d2d2d;
+  border-radius: 4px;
+  color: #d0d0d0;
+  text-transform: capitalize;
+  font-weight: 500;
 }
