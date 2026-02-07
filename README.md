@@ -2,24 +2,24 @@
 
 ![llmcouncil](images/header2.jpeg)
 
-> **Fork del proyecto original [karpathy/llm-council](https://github.com/karpathy/llm-council)** con mejoras y funcionalidades adicionales.
+> **Fork of the original [karpathy/llm-council](https://github.com/karpathy/llm-council)** project with improvements and additional features.
 
 The idea of this repo is that instead of asking a question to your favorite LLM provider (e.g. OpenAI GPT 5.1, Google Gemini 3.0 Pro, Anthropic Claude Sonnet 4.5, xAI Grok 4, eg.c), you can group them into your "LLM Council". This repo is a simple, local web app that essentially looks like ChatGPT except it uses OpenRouter to send your query to multiple LLMs, it then asks them to review and rank each other's work, and finally a Chairman LLM produces the final response.
 
-## Modificaciones en este fork
+## Modifications in this fork
 
-Respecto al repositorio original (que solo incluía modelos premium), este fork añade:
+Compared to the original repository (which only included premium models), this fork adds:
 
-| Original | Este fork |
+| Original | This fork |
 |----------|-----------|
-| Un solo tipo de consejo (Premium) | **Tres tipos**: 💎 Premium, 💰 Economic, 🆓 Free |
-| Selección fija de modelos | **Selección por mensaje** del tipo de consejo |
-| — | **Fallback automático**: modelos free pasan a paid si fallan |
-| — | **Exportación a PDF** con texto seleccionable (pdfmake) |
-| — | **Reasoning tokens**: extracción y manejo para modelos DeepSeek R1 |
-| — | **Context summarization**: resumen automático para límites de tokens |
-| — | **Acceso remoto**: soporte Tailscale, CORS configurable |
-| — | **Windows**: instrucciones para PowerShell y CMD |
+| Single council type (Premium) | **Three types**: 💎 Premium, 💰 Economic, 🆓 Free |
+| Fixed model selection | **Per-message council type selection** |
+| — | **Automatic fallback**: free models switch to paid if they fail |
+| — | **PDF export** with selectable text (pdfmake) |
+| — | **Reasoning tokens**: extraction and handling for DeepSeek R1 models |
+| — | **Context summarization**: automatic summarization for token limits |
+| — | **Remote access**: Tailscale support, configurable CORS |
+| — | **Windows**: instructions for PowerShell and CMD |
 
 In a bit more detail, here is what happens when you submit a query:
 
@@ -31,7 +31,7 @@ In a bit more detail, here is what happens when you submit a query:
 
 This project was 99% vibe coded as a fun Saturday hack because I wanted to explore and evaluate a number of LLMs side by side in the process of [reading books together with LLMs](https://x.com/karpathy/status/1990577951671509438). It's nice and useful to see multiple responses side by side, and also the cross-opinions of all LLMs on each other's outputs. I'm not going to support it in any way, it's provided here as is for other people's inspiration and I don't intend to improve it. Code is ephemeral now and libraries are over, ask your LLM to change it in whatever way you like.
 
-Para un registro detallado de los cambios en este fork, véase [CHANGELOG.md](CHANGELOG.md).
+For a detailed record of changes in this fork, see [CHANGELOG.md](CHANGELOG.md).
 
 ## Setup
 
