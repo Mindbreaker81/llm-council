@@ -136,6 +136,7 @@ function App() {
                 const lastMsg = messages[messages.length - 1];
                 if (lastMsg) {
                   lastMsg.stage1 = event.data || [];
+                  if (event.council_type) lastMsg.council_type = event.council_type;
                   lastMsg.loading = lastMsg.loading || {};
                   lastMsg.loading.stage1 = false;
                 }
@@ -193,6 +194,7 @@ function App() {
                 const lastMsg = messages[messages.length - 1];
                 if (lastMsg) {
                   lastMsg.stage3 = event.data || {};
+                  if (event.council_type) lastMsg.council_type = event.council_type;
                   lastMsg.loading = lastMsg.loading || {};
                   lastMsg.loading.stage3 = false;
                 }

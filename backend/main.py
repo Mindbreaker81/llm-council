@@ -159,12 +159,13 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
         council_type=request.council_type
     )
 
-    # Add assistant message with all stages
+    # Add assistant message with all stages (include council_type for display in chat and PDF)
     storage.add_assistant_message(
         conversation_id,
         stage1_results,
         stage2_results,
-        stage3_result
+        stage3_result,
+        council_type=request.council_type
     )
 
     # Return the complete response with metadata
@@ -211,13 +212,13 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             print(f"DEBUG: Using council models: {council_models}")
             print(f"DEBUG: Using chairman model: {chairman_model}")
 
-            # Stage 1: Collect responses
+            # Stage 1: Collect responses (include council_type so frontend has it even when stage2 is skipped)
             yield f"data: {json.dumps({'type': 'stage1_start'})}\n\n"
             stage1_results = await stage1_collect_responses(request.content, council_models)
             print(f"DEBUG: Stage 1 completed with {len(stage1_results)} results")
             if stage1_results:
                 print(f"DEBUG: Stage 1 first result: {stage1_results[0]}")
-            yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results})}\n\n"
+            yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results, 'council_type': request.council_type})}\n\n"
 
             # Stage 2: Collect rankings (only if Stage 1 has results)
             if not stage1_results:
@@ -237,10 +238,11 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                     "model": chairman_model,
                     "response": "Error: No models responded successfully. Please check your API key and model availability, or try a different council type."
                 }
+                yield f"data: {json.dumps({'type': 'stage3_complete', 'data': stage3_result, 'council_type': request.council_type})}\n\n"
             else:
                 yield f"data: {json.dumps({'type': 'stage3_start'})}\n\n"
                 stage3_result = await stage3_synthesize_final(request.content, stage1_results, stage2_results, chairman_model)
-                yield f"data: {json.dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
+                yield f"data: {json.dumps({'type': 'stage3_complete', 'data': stage3_result, 'council_type': request.council_type})}\n\n"
 
             # Wait for title generation if it was started
             if title_task:

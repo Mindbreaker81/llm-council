@@ -101,11 +101,13 @@ export default function ChatInterface({
                 <div className="assistant-message">
                   <div className="message-label">
                     LLM Council
-                    {msg.council_type && (
-                      <span className="council-type-indicator">
-                        {msg.council_type === 'premium' ? '💎 Premium' : msg.council_type === 'economic' ? '💰 Económico' : '🆓 Free'}
-                      </span>
-                    )}
+                    <span className="council-type-indicator">
+                      {(msg.council_type || conversation.council_type || 'premium') === 'premium'
+                        ? '💎 Premium'
+                        : (msg.council_type || conversation.council_type || 'premium') === 'economic'
+                          ? '💰 Económico'
+                          : '🆓 Free'}
+                    </span>
                   </div>
 
                   {/* Stage 1 */}

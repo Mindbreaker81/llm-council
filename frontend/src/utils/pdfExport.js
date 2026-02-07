@@ -195,8 +195,10 @@ function generatePdfContent(conversation) {
     
     // Respuesta del asistente
     if (msg.role === 'assistant') {
-      const msgCouncilType = getCouncilTypeDisplay(msg.council_type);
-      
+      // Fallback: usar council_type del mensaje, o de la conversación (mensajes antiguos)
+      const effectiveCouncilType = msg.council_type || conversation.council_type;
+      const msgCouncilType = getCouncilTypeDisplay(effectiveCouncilType);
+
       content.push({
         text: `Respuesta del LLM Council ${msgCouncilType.emoji} ${msgCouncilType.name}`,
         style: 'sectionTitle',
