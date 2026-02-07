@@ -2,17 +2,15 @@ import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { marked } from 'marked';
 
-// Configurar pdfmake con las fuentes
-// Las fuentes vfs_fonts incluyen Roboto por defecto
+// Configure pdfmake with fonts (vfs_fonts includes Roboto by default)
 if (pdfFonts && pdfFonts.pdfMake && pdfFonts.pdfMake.vfs) {
   pdfMake.vfs = pdfFonts.pdfMake.vfs;
 } else if (pdfFonts) {
   pdfMake.vfs = pdfFonts;
 }
 
-// Definir las fuentes disponibles (Roboto viene con vfs_fonts)
-// Nota: Las fuentes estándar de PDF (Courier, Helvetica, Times) NO están disponibles
-// en el navegador, solo en Node.js. En el navegador solo tenemos Roboto.
+// Define available fonts (Roboto comes with vfs_fonts)
+// Note: Standard PDF fonts (Courier, Helvetica, Times) are NOT available in the browser, only in Node.js.
 pdfMake.fonts = {
   Roboto: {
     normal: 'Roboto-Regular.ttf',
@@ -22,38 +20,38 @@ pdfMake.fonts = {
   }
 };
 
-// Configurar marked para convertir markdown a texto plano
+// Configure marked for markdown to plain text conversion
 marked.setOptions({
   breaks: true,
   gfm: true
 });
 
 /**
- * Convierte markdown a texto plano (sin HTML)
+ * Converts markdown to plain text (no HTML)
  */
 function markdownToText(markdown) {
   if (!markdown) return '';
   try {
-    // Primero convertir markdown a HTML
+    // First convert markdown to HTML
     const html = marked.parse(markdown);
-    // Luego convertir HTML a texto plano
+    // Then convert HTML to plain text
     const div = document.createElement('div');
     div.innerHTML = html;
     return div.textContent || div.innerText || '';
   } catch (error) {
-    console.warn('Error al convertir markdown:', error);
+    console.warn('Error converting markdown:', error);
     return markdown;
   }
 }
 
 /**
- * Convierte markdown a texto con formato básico para pdfmake
- * Retorna un array de objetos de texto con estilos
+ * Converts markdown to basic formatted text for pdfmake
+ * Returns an array of text objects with styles
  */
 function markdownToPdfText(markdown) {
   if (!markdown) return '';
   const text = markdownToText(markdown);
-  // Dividir en párrafos y líneas
+  // Split into paragraphs and lines
   const lines = text.split('\n').filter(line => line.trim());
   const result = [];
   
@@ -70,31 +68,31 @@ function markdownToPdfText(markdown) {
 }
 
 /**
- * Obtiene el nombre corto del modelo (sin el prefijo del proveedor)
+ * Gets short model name (without provider prefix)
  */
 function getShortModelName(model) {
   return model.split('/')[1] || model;
 }
 
 /**
- * Obtiene el emoji y nombre del tipo de consejo
+ * Gets emoji and name for council type
  */
 function getCouncilTypeDisplay(councilType) {
   const types = {
     premium: { emoji: '💎', name: 'Premium' },
-    economic: { emoji: '💰', name: 'Económico' },
+    economic: { emoji: '💰', name: 'Economic' },
     free: { emoji: '🆓', name: 'Free' }
   };
   return types[councilType] || { emoji: '', name: councilType || 'Premium' };
 }
 
 /**
- * Formatea una fecha ISO a formato legible
+ * Formats ISO date to readable format
  */
 function formatDate(dateString) {
   if (!dateString) return '';
   const date = new Date(dateString);
-  return date.toLocaleDateString('es-ES', {
+  return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -104,7 +102,7 @@ function formatDate(dateString) {
 }
 
 /**
- * Genera la estructura de datos para pdfmake
+ * Generates data structure for pdfmake
  */
 function generatePdfContent(conversation) {
   const councilType = getCouncilTypeDisplay(conversation.council_type);
@@ -112,7 +110,7 @@ function generatePdfContent(conversation) {
   
   const content = [];
   
-  // Encabezado
+  // Header
   content.push(
     {
       text: 'LLM Council',
@@ -120,19 +118,19 @@ function generatePdfContent(conversation) {
       margin: [0, 0, 0, 10]
     },
     {
-      text: conversation.title || 'Conversación',
+      text: conversation.title || 'Conversation',
       style: 'subheader',
       margin: [0, 0, 0, 10]
     },
     {
       columns: [
         {
-          text: `Fecha: ${formattedDate}`,
+          text: `Date: ${formattedDate}`,
           fontSize: 10,
           color: '#666666'
         },
         {
-          text: `Tipo de Consejo: ${councilType.emoji} ${councilType.name}`,
+          text: `Council Type: ${councilType.emoji} ${councilType.name}`,
           fontSize: 10,
           color: '#666666',
           alignment: 'right'
@@ -156,7 +154,7 @@ function generatePdfContent(conversation) {
     }
   );
   
-  // Mensajes
+  // Messages
   conversation.messages.forEach((msg, index) => {
     if (index > 0) {
       content.push({
@@ -176,11 +174,11 @@ function generatePdfContent(conversation) {
       });
     }
     
-    // Mensaje del usuario
+    // User message
     if (msg.role === 'user') {
       content.push(
         {
-          text: 'Pregunta del Usuario',
+          text: 'User Question',
           style: 'sectionTitle',
           color: '#4a90e2',
           margin: [0, 0, 0, 8]
@@ -193,14 +191,14 @@ function generatePdfContent(conversation) {
       );
     }
     
-    // Respuesta del asistente
+    // Assistant response
     if (msg.role === 'assistant') {
-      // Fallback: usar council_type del mensaje, o de la conversación (mensajes antiguos)
+      // Fallback: use message council_type, or conversation (legacy messages)
       const effectiveCouncilType = msg.council_type || conversation.council_type;
       const msgCouncilType = getCouncilTypeDisplay(effectiveCouncilType);
 
       content.push({
-        text: `Respuesta del LLM Council ${msgCouncilType.emoji} ${msgCouncilType.name}`,
+        text: `LLM Council Response ${msgCouncilType.emoji} ${msgCouncilType.name}`,
         style: 'sectionTitle',
         color: '#4a90e2',
         margin: [0, 0, 0, 15]
@@ -260,7 +258,7 @@ function generatePdfContent(conversation) {
             margin: [0, 20, 0, 10]
           },
           {
-            text: 'Cada modelo evaluó todas las respuestas (anónimas como Response A, B, C, etc.) y proporcionó rankings.',
+            text: 'Each model evaluated all responses (anonymous as Response A, B, C, etc.) and provided rankings.',
             style: 'infoText',
             margin: [0, 0, 0, 15]
           }
@@ -269,7 +267,7 @@ function generatePdfContent(conversation) {
         msg.stage2.forEach((ranking, idx) => {
           content.push(
             {
-              text: `Evaluación de ${getShortModelName(ranking.model)}`,
+              text: `Evaluation by ${getShortModelName(ranking.model)}`,
               style: 'modelName',
               margin: [0, idx > 0 ? 15 : 0, 0, 5]
             },
@@ -280,7 +278,7 @@ function generatePdfContent(conversation) {
             }
           );
           
-          // Ranking extraído
+          // Extracted ranking
           if (ranking.parsed_ranking && ranking.parsed_ranking.length > 0) {
             const rankingList = ranking.parsed_ranking.map((label, rankIdx) => {
               const modelName = msg.metadata?.label_to_model?.[label]
@@ -291,7 +289,7 @@ function generatePdfContent(conversation) {
             
             content.push(
               {
-                text: 'Ranking Extraído:',
+                text: 'Extracted Ranking:',
                 style: 'labelText',
                 margin: [0, 10, 0, 5]
               },
@@ -332,13 +330,13 @@ function generatePdfContent(conversation) {
           
           content.push(
             {
-              text: 'Rankings Agregados (Street Cred)',
+              text: 'Aggregate Rankings (Street Cred)',
               style: 'stageTitle',
               color: '#4a90e2',
               margin: [0, 20, 0, 10]
             },
             {
-              text: 'Resultados combinados de todas las evaluaciones (menor puntuación es mejor):',
+              text: 'Combined results from all evaluations (lower score is better):',
               style: 'infoText',
               margin: [0, 0, 0, 10]
             },
@@ -349,9 +347,9 @@ function generatePdfContent(conversation) {
                 body: [
                   [
                     { text: '#', style: 'tableHeader' },
-                    { text: 'Modelo', style: 'tableHeader' },
-                    { text: 'Promedio', style: 'tableHeader' },
-                    { text: 'Votos', style: 'tableHeader' }
+                    { text: 'Model', style: 'tableHeader' },
+                    { text: 'Average', style: 'tableHeader' },
+                    { text: 'Votes', style: 'tableHeader' }
                   ],
                   ...tableBody
                 ]
@@ -386,7 +384,7 @@ function generatePdfContent(conversation) {
     }
   });
   
-  // Pie de página
+  // Footer
   content.push(
     {
       canvas: [
@@ -403,7 +401,7 @@ function generatePdfContent(conversation) {
       margin: [0, 30, 0, 10]
     },
     {
-      text: `Generado por LLM Council - ${new Date().toLocaleDateString('es-ES')}`,
+      text: `Generated by LLM Council - ${new Date().toLocaleDateString('en-US')}`,
       style: 'footer',
       alignment: 'center',
       margin: [0, 10, 0, 0]
@@ -414,12 +412,12 @@ function generatePdfContent(conversation) {
 }
 
 /**
- * Exporta una conversación completa a PDF con texto seleccionable
- * @param {Object} conversation - Objeto de conversación con todos los mensajes y stages
+ * Exports a complete conversation to PDF with selectable text
+ * @param {Object} conversation - Conversation object with all messages and stages
  */
 export async function exportConversationToPDF(conversation) {
   if (!conversation || !conversation.messages || conversation.messages.length === 0) {
-    throw new Error('La conversación no tiene mensajes para exportar');
+    throw new Error('The conversation has no messages to export');
   }
   
   try {
@@ -428,7 +426,7 @@ export async function exportConversationToPDF(conversation) {
     const docDefinition = {
       content: content,
       defaultStyle: {
-        font: 'Roboto', // Roboto viene predefinida con pdfmake
+        font: 'Roboto', // Roboto is included with pdfmake
         fontSize: 11,
         lineHeight: 1.5
       },
@@ -503,19 +501,19 @@ export async function exportConversationToPDF(conversation) {
       pageSize: 'A4',
       pageMargins: [40, 60, 40, 60],
       info: {
-        title: `LLM Council - ${conversation.title || 'Conversación'}`,
+        title: `LLM Council - ${conversation.title || 'Conversation'}`,
         author: 'LLM Council',
-        subject: 'Conversación del LLM Council'
+        subject: 'LLM Council Conversation'
       }
     };
     
-    const filename = `llm-council-${(conversation.title || 'conversacion').replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`;
+    const filename = `llm-council-${(conversation.title || 'conversation').replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`;
     
     pdfMake.createPdf(docDefinition).download(filename);
     
-    console.log('PDF generado exitosamente con pdfmake (texto seleccionable)');
+    console.log('PDF generated successfully with pdfmake (selectable text)');
   } catch (error) {
-    console.error('Error al generar PDF:', error);
-    throw new Error('Error al generar el PDF: ' + error.message);
+    console.error('Error generating PDF:', error);
+    throw new Error('Error generating PDF: ' + error.message);
   }
 }

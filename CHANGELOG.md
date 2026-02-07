@@ -1,6 +1,17 @@
 # Changelog
 
-Todos los cambios notables en este proyecto serán documentados en este archivo.
+All notable changes to this project will be documented in this file.
+
+## [2.3.0] - 2026-02-07
+
+### Changed
+- **Language unification**: All user-facing text in the web app is now in English
+  - **ChatInterface.jsx**: Alerts, button labels, council type labels (Economic), tooltips translated to English
+  - **pdfExport.js**: All PDF content (headers, section titles, table headers, footer), error messages, comments, and date formatting (`es-ES` → `en-US`) translated to English
+
+### Files Modified
+- `frontend/src/components/ChatInterface.jsx`: User-facing strings (alerts, Export PDF button, Council Type label, Economic label)
+- `frontend/src/utils/pdfExport.js`: PDF content, comments, error messages, locale
 
 ## [2.2.0] - 2025-11-27
 

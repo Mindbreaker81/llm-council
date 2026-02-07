@@ -51,7 +51,7 @@ export default function ChatInterface({
 
   const handleExportPDF = async () => {
     if (!conversation || !conversation.messages || conversation.messages.length === 0) {
-      alert('No hay mensajes para exportar');
+      alert('No messages to export');
       return;
     }
 
@@ -59,8 +59,8 @@ export default function ChatInterface({
     try {
       await exportConversationToPDF(conversation);
     } catch (error) {
-      console.error('Error al exportar PDF:', error);
-      alert('Error al generar el PDF: ' + error.message);
+      console.error('Error exporting PDF:', error);
+      alert('Error generating PDF: ' + error.message);
     } finally {
       setIsExporting(false);
     }
@@ -105,7 +105,7 @@ export default function ChatInterface({
                       {(msg.council_type || conversation.council_type || 'premium') === 'premium'
                         ? '💎 Premium'
                         : (msg.council_type || conversation.council_type || 'premium') === 'economic'
-                          ? '💰 Económico'
+                          ? '💰 Economic'
                           : '🆓 Free'}
                     </span>
                   </div>
@@ -163,16 +163,16 @@ export default function ChatInterface({
               className="export-pdf-button"
               onClick={handleExportPDF}
               disabled={isExporting || isLoading}
-              title="Exportar conversación a PDF"
+              title="Export conversation to PDF"
             >
               {isExporting ? (
                 <>
                   <span className="spinner-small"></span>
-                  Generando PDF...
+                  Generating PDF...
                 </>
               ) : (
                 <>
-                  📄 Exportar PDF
+                  📄 Export PDF
                 </>
               )}
             </button>
@@ -182,7 +182,7 @@ export default function ChatInterface({
 
       <form className="input-form" onSubmit={handleSubmit}>
         <div className="council-type-selector">
-          <label>Tipo de Consejo:</label>
+          <label>Council Type:</label>
           <div className="council-type-options">
             <label className="council-type-option">
               <input
@@ -204,7 +204,7 @@ export default function ChatInterface({
                 onChange={(e) => setCouncilType(e.target.value)}
                 disabled={isLoading}
               />
-              <span>Económico</span>
+              <span>Economic</span>
             </label>
             <label className="council-type-option">
               <input
