@@ -63,6 +63,9 @@ describe('ChatInterface', () => {
     );
 
     expect(screen.getByText('⚙ Custom')).toBeInTheDocument();
+    expect(
+      screen.getByText('Select 2-8 models. The active Chairman is the orchestrator that writes the final answer.')
+    ).toBeInTheDocument();
     expect(screen.getByText('Stage 3: Final Council Answer')).toBeInTheDocument();
     expect(screen.getByText('Final custom answer.')).toBeInTheDocument();
   });

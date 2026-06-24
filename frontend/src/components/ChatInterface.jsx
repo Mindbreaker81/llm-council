@@ -415,6 +415,9 @@ export default function ChatInterface({
             <div className="custom-council-title">
               Choose custom council models
             </div>
+            <p className="custom-council-help">
+              Select 2-8 models. The active Chairman is the orchestrator that writes the final answer.
+            </p>
             <div className="custom-council-toolbar">
               <input
                 className="model-search-input"
