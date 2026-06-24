@@ -12,8 +12,9 @@ Compared to the original repository (which only included premium models), this f
 
 | Original | This fork |
 |----------|-----------|
-| Single council type (Premium) | **Three types**: 💎 Premium, 💰 Economic, 🆓 Free |
+| Single council type (Premium) | **Four types**: 💎 Premium, 💰 Economic, 🆓 Free, ⚙ Custom |
 | Fixed model selection | **Per-message council type selection** |
+| — | **Custom council**: choose models from OpenRouter's live catalog |
 | — | **Automatic fallback**: free models switch to paid if they fail |
 | — | **PDF export** with selectable text (pdfmake) |
 | — | **Reasoning tokens**: extraction and handling for DeepSeek R1 models |
@@ -64,13 +65,14 @@ Get your API key at [openrouter.ai](https://openrouter.ai/). Make sure to purcha
 
 ### 2. Configure Models (Optional)
 
-The application supports three types of councils:
+The application supports four types of councils:
 
 - **Premium**: High-performance models (GPT-5.1, Gemini 3 Pro, Claude Opus 4.5, Grok 4)
 - **Economic**: Cost-effective models with good performance (DeepSeek V3.1, Qwen3, Llama 3.3, etc.)
 - **Free**: Free models with automatic fallback to paid versions if unavailable
+- **Custom**: Pick 2-8 text models and a Chairman from OpenRouter's live model catalog
 
-Edit `backend/config.py` to customize the council models for each type:
+Edit `backend/config.py` to customize the preset council models:
 
 ```python
 # Premium Council
@@ -107,7 +109,7 @@ COUNCIL_MODELS_FREE = [
 CHAIRMAN_MODEL_FREE = "deepseek/deepseek-r1-distill-llama-70b:free"
 ```
 
-You can select the council type when sending a message. The selected council type is displayed in each assistant response and in the conversation list.
+You can select the council type when sending a message. The selected council type is displayed in each assistant response and in the conversation list. Custom councils are validated against OpenRouter before the message is sent.
 
 ## Running the Application
 
@@ -185,18 +187,20 @@ Then open http://localhost:5173 in your browser.
 ## Usage
 
 1. **Create a Conversation**: Click "+ New Conversation" in the sidebar
-2. **Select Council Type**: Choose Premium, Economic, or Free using the selector above the message input
+2. **Select Council Type**: Choose Premium, Economic, Free, or Custom using the selector above the message input
+   - For Custom, search/filter OpenRouter models, select 2-8 council members, and choose the Chairman
 3. **Ask a Question**: Type your question and send it
 4. **View Results**: 
    - Stage 1 shows individual responses from each model
    - Stage 2 shows peer rankings and evaluations
    - Stage 3 shows the final synthesized answer
-   - Each response displays the council type used (💎 Premium, 💰 Economic, 🆓 Free)
+   - Each response displays the council type used (💎 Premium, 💰 Economic, 🆓 Free, ⚙ Custom)
 
 ## Features
 
-- **Three Council Types**: Choose between Premium, Economic, or Free models when sending messages
-- **Council Type Display**: Each response shows which council type was used (💎 Premium, 💰 Economic, 🆓 Free)
+- **Four Council Types**: Choose between Premium, Economic, Free, or Custom models when sending messages
+- **Custom Council Selector**: Search OpenRouter's model catalog, filter free/high-context models, and choose the Chairman per message
+- **Council Type Display**: Each response shows which council type was used (💎 Premium, 💰 Economic, 🆓 Free, ⚙ Custom)
 - **Automatic Fallback**: Free models automatically fallback to paid versions if unavailable
 - **Reasoning Token Handling**: Properly handles reasoning tokens from models like DeepSeek R1
 - **Context Management**: Automatically summarizes large contexts for models with token limits (32k for free, 128k for economic)
@@ -215,6 +219,14 @@ Then open http://localhost:5173 in your browser.
 - **Premium Models**: High-performance models for best quality
 - **Economic Models**: Cost-effective alternatives with good performance
 - **Free Models**: Free tier models with automatic fallback to paid versions on failure
+- **Custom Models**: Live OpenRouter catalog selection. Custom models do not use the preset fallback map; failed models are skipped while the council continues with successful responses.
+
+### OpenRouter Model Catalog
+- `GET /api/models`: List OpenRouter models for the Custom selector
+- `GET /api/models/detail?model_id=provider/model`: Fetch one model by id
+- `POST /api/councils/validate`: Validate a Custom council before sending
+- Free models are detected by zero prompt, completion, and request pricing, not only by the `:free` suffix
+- `openrouter/free` is allowed but marked as a dynamic router because it is less reproducible than choosing concrete models
 
 ### Advanced Features
 - **Reasoning Token Extraction**: Automatically extracts final content from reasoning models (DeepSeek R1) while preserving original for transparency

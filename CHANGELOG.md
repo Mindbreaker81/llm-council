@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.0] - 2026-06-24
+
+### Added
+- **Custom council type**: Users can choose 2-8 OpenRouter text models and a Chairman per message.
+- **OpenRouter catalog API**: Added backend endpoints to list, inspect, and validate models for custom councils.
+- **Model metadata**: Custom council messages store the selected models, Chairman, and model metadata snapshot.
+- **Backend tests**: Added unit coverage for model catalog filtering, free model detection, custom validation, and council config resolution.
+
+### Improved
+- **Streaming robustness**: SSE parsing now buffers partial chunks and handles UTF-8 split across reads.
+- **Storage safety**: Conversation JSON writes are atomic and protected by per-conversation locks.
+- **Validation**: Council type validation is centralized and custom councils are validated server-side before sending.
+- **Logging**: Replaced verbose debug prints with Python logging.
+
+### Fixed
+- **Council metadata**: Conversation response models now preserve `council_type`.
+- **Free context handling**: Streaming Stage 3 now passes the selected `council_type` to context-limit logic.
+- **Frontend lockfile**: Regenerated `package-lock.json` so frontend dependencies match `package.json`.
+
 ## [2.3.0] - 2026-02-07
 
 ### Changed
@@ -225,4 +244,3 @@ All notable changes to this project will be documented in this file.
 ## [1.0.0] - Versión Original
 
 Versión inicial del proyecto con soporte para un solo tipo de consejo (Premium).
-
