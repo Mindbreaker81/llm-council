@@ -1,9 +1,12 @@
 """OpenRouter API client for making LLM requests."""
 
 import httpx
+import logging
 import re
 from typing import List, Dict, Any, Optional
 from .config import OPENROUTER_API_KEY, OPENROUTER_API_URL, MODEL_FALLBACK_MAP
+
+logger = logging.getLogger(__name__)
 
 
 def extract_final_content(response_text: str) -> str:
@@ -23,9 +26,6 @@ def extract_final_content(response_text: str) -> str:
         return ""
     
     text = response_text
-    
-    # Remove <think>...</think> blocks (common in reasoning models like DeepSeek R1)
-    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL | re.IGNORECASE)
     
     # Remove <think>...</think> blocks (common in reasoning models)
     text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL | re.IGNORECASE)
@@ -77,6 +77,9 @@ async def query_model(
     Returns:
         Response dict with 'content', 'original_content', and optional 'reasoning_details', or None if failed
     """
+    if not OPENROUTER_API_KEY:
+        raise RuntimeError("OPENROUTER_API_KEY is not configured")
+
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
@@ -116,26 +119,24 @@ async def query_model(
                 'reasoning_details': reasoning_details
             }
             
-            # Debug log
-            content_length = len(original_content) if original_content else 0
-            final_length = len(final_content) if final_content else 0
-            print(f"DEBUG: {model} - original_content length: {content_length}, final_content length: {final_length}")
-            if original_content:
-                print(f"DEBUG: {model} returned content (preview: {original_content[:50]}...)")
-            else:
-                print(f"DEBUG: {model} returned empty content")
+            logger.debug(
+                "%s returned %s original chars and %s final chars",
+                model,
+                len(original_content) if original_content else 0,
+                len(final_content) if final_content else 0
+            )
             
             return result
 
     except httpx.HTTPStatusError as e:
         error_msg = f"HTTP {e.response.status_code}: {e.response.text[:200] if e.response.text else 'No response body'}"
-        print(f"Error querying model {model}: {error_msg}")
+        logger.warning("Error querying model %s: %s", model, error_msg)
         
         # Try fallback if enabled and model is a free model
         if use_fallback:
             fallback_model = get_fallback_model(model)
             if fallback_model:
-                print(f"Attempting fallback to {fallback_model}")
+                logger.info("Attempting fallback from %s to %s", model, fallback_model)
                 return await query_model(
                     fallback_model,
                     messages,
@@ -147,13 +148,13 @@ async def query_model(
         return None
     except Exception as e:
         error_msg = str(e)
-        print(f"Error querying model {model}: {error_msg}")
+        logger.warning("Error querying model %s: %s", model, error_msg)
         
         # Try fallback if enabled and model is a free model
         if use_fallback:
             fallback_model = get_fallback_model(model)
             if fallback_model:
-                print(f"Attempting fallback to {fallback_model}")
+                logger.info("Attempting fallback from %s to %s", model, fallback_model)
                 return await query_model(
                     fallback_model,
                     messages,

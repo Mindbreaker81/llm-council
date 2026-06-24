@@ -1,5 +1,6 @@
 """3-stage LLM Council orchestration."""
 
+import logging
 from typing import List, Dict, Any, Tuple, Optional
 from .openrouter import query_models_parallel, query_model
 from .config import (
@@ -15,6 +16,8 @@ from .config import (
     COUNCIL_MODELS,
     CHAIRMAN_MODEL,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def get_council_config(council_type: str = COUNCIL_TYPE_PREMIUM) -> Tuple[List[str], str]:
@@ -64,20 +67,18 @@ async def stage1_collect_responses(
 
     # Format results - keep original for user transparency, extract final for Stage 2
     stage1_results = []
-    print(f"DEBUG: Processing {len(responses)} responses from models")
+    logger.debug("Processing responses from %s models", len(responses))
     for model, response in responses.items():
         if response is None:
-            print(f"DEBUG: {model} returned None (failed)")
+            logger.info("%s returned no response", model)
             continue
             
         original_content = response.get('original_content', '')
         final_content = response.get('content', '')
         
-        print(f"DEBUG: {model} - original_content: {len(original_content) if original_content else 0} chars, final_content: {len(final_content) if final_content else 0} chars")
-        
         # If both are empty, skip this response
         if not original_content and not final_content:
-            print(f"DEBUG: Skipping {model} - both original_content and content are empty")
+            logger.info("Skipping %s because it returned empty content", model)
             continue
         
         # Use final_content if available, otherwise use original_content
@@ -89,11 +90,9 @@ async def stage1_collect_responses(
             "response": display_content,  # Content to display (final or original)
             "original_response": original_display  # Original with reasoning tokens for transparency
         })
-        print(f"DEBUG: Added {model} to stage1_results (response length: {len(display_content)})")
+        logger.debug("Added %s to stage1 results", model)
     
-    print(f"DEBUG: stage1_collect_responses returning {len(stage1_results)} results")
-    if stage1_results:
-        print(f"DEBUG: First result model: {stage1_results[0]['model']}, response length: {len(stage1_results[0]['response'])}")
+    logger.info("Stage 1 returning %s model responses", len(stage1_results))
     return stage1_results
 
 
