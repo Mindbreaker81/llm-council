@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - **Custom council type**: Users can choose 2-8 OpenRouter text models and a Chairman per message.
 - **OpenRouter catalog API**: Added backend endpoints to list, inspect, and validate models for custom councils.
+- **Council preset visibility**: Added an API/UI view of active preset models and Chairman for Premium, Economic, and Free councils.
 - **Model metadata**: Custom council messages store the selected models, Chairman, and model metadata snapshot.
 - **Backend tests**: Added unit coverage for model catalog filtering, free model detection, custom validation, and council config resolution.
 - **Frontend tests**: Added a dependency-free Node test for chunked Server-Sent Events parsing and a Vitest/Testing Library render test for custom council responses.
@@ -23,6 +24,7 @@ All notable changes to this project will be documented in this file.
 - **Council metadata**: Conversation response models now preserve `council_type`.
 - **Free context handling**: Streaming Stage 3 now passes the selected `council_type` to context-limit logic.
 - **Frontend lockfile**: Regenerated `package-lock.json` so frontend dependencies match `package.json`.
+- **New conversation feedback**: Newly created conversations are selected and rendered immediately in the UI.
 
 ## [2.3.0] - 2026-02-07
 

@@ -113,6 +113,17 @@ export const api = {
   },
 
   /**
+   * List built-in council presets and active models.
+   */
+  async listCouncils() {
+    const response = await fetch(`${API_BASE}/api/councils`);
+    if (!response.ok) {
+      throw new Error('Failed to list councils');
+    }
+    return response.json();
+  },
+
+  /**
    * Send a message in a conversation.
    */
   async sendMessage(conversationId, content, councilType = 'premium', customCouncil = null) {

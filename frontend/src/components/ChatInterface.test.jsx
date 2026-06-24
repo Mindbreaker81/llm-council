@@ -6,6 +6,22 @@ vi.mock('../utils/pdfExport', () => ({
   exportConversationToPDF: vi.fn(),
 }));
 
+vi.mock('../api', () => ({
+  api: {
+    listCouncils: vi.fn().mockResolvedValue({
+      presets: [
+        {
+          type: 'premium',
+          models: ['openai/gpt-5.1'],
+          chairman_model: 'openai/gpt-5.1',
+        },
+      ],
+    }),
+    listModels: vi.fn().mockResolvedValue({ models: [] }),
+    validateCouncil: vi.fn().mockResolvedValue({ valid: true, warnings: [] }),
+  },
+}));
+
 describe('ChatInterface', () => {
   it('renders a custom council assistant response', () => {
     render(

@@ -46,10 +46,18 @@ function App() {
       // Use premium as default when creating new conversation
       const newConv = await api.createConversation('premium');
       setConversations([
-        { id: newConv.id, created_at: newConv.created_at, message_count: 0, council_type: newConv.council_type },
+        {
+          id: newConv.id,
+          created_at: newConv.created_at,
+          title: newConv.title || 'New Conversation',
+          message_count: 0,
+          council_type: newConv.council_type,
+        },
         ...conversations,
       ]);
+      setCurrentConversation(newConv);
       setCurrentConversationId(newConv.id);
+      setIsSidebarOpen(false);
     } catch (error) {
       console.error('Failed to create conversation:', error);
     }

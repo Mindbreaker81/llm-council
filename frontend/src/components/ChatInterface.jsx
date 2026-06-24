@@ -40,6 +40,7 @@ export default function ChatInterface({
   const [customCost, setCustomCost] = useState(null);
   const [modelError, setModelError] = useState('');
   const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [presetCouncils, setPresetCouncils] = useState({});
   const [isExporting, setIsExporting] = useState(false);
   const messagesEndRef = useRef(null);
   const previousConversationIdRef = useRef(null);
@@ -58,6 +59,27 @@ export default function ChatInterface({
       setCouncilType(getEffectiveConversationCouncilType(conversation));
     }
   }, [conversation]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    api.listCouncils()
+      .then((result) => {
+        if (cancelled) return;
+        const presets = {};
+        (result.presets || []).forEach((preset) => {
+          presets[preset.type] = preset;
+        });
+        setPresetCouncils(presets);
+      })
+      .catch((error) => {
+        console.error('Failed to load council presets:', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (councilType !== 'custom') return;
@@ -182,6 +204,8 @@ export default function ChatInterface({
       return [...prev, modelId];
     });
   };
+
+  const activePreset = presetCouncils[councilType];
 
   const handleKeyDown = (e) => {
     // Submit on Enter (without Shift)
@@ -370,8 +394,27 @@ export default function ChatInterface({
           </div>
         </div>
 
+        {councilType !== 'custom' && activePreset && (
+          <div className="active-models-panel">
+            <div className="active-models-header">
+              <span>Active models</span>
+              <span>Chairman: {activePreset.chairman_model}</span>
+            </div>
+            <div className="active-model-list">
+              {activePreset.models.map((model) => (
+                <span key={model} className="active-model-chip">
+                  {model}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {councilType === 'custom' && (
           <div className="custom-council-panel">
+            <div className="custom-council-title">
+              Choose custom council models
+            </div>
             <div className="custom-council-toolbar">
               <input
                 className="model-search-input"

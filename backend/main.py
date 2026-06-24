@@ -174,6 +174,22 @@ async def root():
     return {"status": "ok", "service": "LLM Council API"}
 
 
+@app.get("/api/councils")
+async def list_councils():
+    """List built-in council presets and their active models."""
+    presets = []
+    for council_type in sorted(VALID_COUNCIL_TYPES):
+        if council_type == COUNCIL_TYPE_CUSTOM:
+            continue
+        models, chairman_model = get_council_config(council_type)
+        presets.append({
+            "type": council_type,
+            "models": models,
+            "chairman_model": chairman_model,
+        })
+    return {"presets": presets}
+
+
 @app.get("/api/models")
 async def list_models(
     free_only: bool = False,
