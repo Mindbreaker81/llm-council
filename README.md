@@ -189,7 +189,8 @@ Then open http://localhost:5173 in your browser.
 1. **Create a Conversation**: Click "+ New Conversation" in the sidebar
 2. **Select Council Type**: Choose Premium, Economic, Free, or Custom using the selector above the message input
    - For Premium, Economic, and Free, the active models and Chairman are shown below the selector
-   - For Custom, search/filter OpenRouter models, select 2-8 council members, and choose the Chairman
+   - For Custom, search/filter OpenRouter models, select 2-8 council members, and choose the Orchestrator
+   - The run summary shows model count, Orchestrator, and estimated request count before sending
 3. **Ask a Question**: Type your question and send it
 4. **View Results**: 
    - Stage 1 shows individual responses from each model
@@ -234,9 +235,9 @@ npm run build
 
 ### Custom Council Chairman
 - In Custom mode, selected models become the Stage 1 and Stage 2 council members
-- The active **Chairman** is the orchestrator/final synthesizer that writes Stage 3
-- If you do not choose a Chairman manually, the first selected model becomes the Chairman
-- Click the `Chairman` button on another selected model to change the orchestrator
+- The active **Orchestrator** is the Chairman/final synthesizer that writes Stage 3
+- If you do not choose one manually, the first selected model becomes the Orchestrator
+- Click the `Orchestrator` button on another selected model to change it
 
 ### Model Configuration
 - **Premium Models**: High-performance models for best quality

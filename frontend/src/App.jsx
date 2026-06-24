@@ -10,6 +10,7 @@ function App() {
   const [currentConversation, setCurrentConversation] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
 
   const loadConversations = useCallback(async () => {
     try {
@@ -57,7 +58,9 @@ function App() {
       ]);
       setCurrentConversation(newConv);
       setCurrentConversationId(newConv.id);
+      setStatusMessage('Conversation created');
       setIsSidebarOpen(false);
+      window.setTimeout(() => setStatusMessage(''), 2500);
     } catch (error) {
       console.error('Failed to create conversation:', error);
     }
@@ -112,6 +115,7 @@ function App() {
           stage2: false,
           stage3: false,
         },
+        progressText: 'Preparing council...',
       };
 
       // Add the partial assistant message
@@ -132,6 +136,7 @@ function App() {
                 if (lastMsg) {
                   lastMsg.loading = lastMsg.loading || {};
                   lastMsg.loading.stage1 = true;
+                  lastMsg.progressText = 'Querying council models...';
                 }
                 return { ...prev, messages };
               });
@@ -148,6 +153,7 @@ function App() {
                   if (event.council_type) lastMsg.council_type = event.council_type;
                   lastMsg.loading = lastMsg.loading || {};
                   lastMsg.loading.stage1 = false;
+                  lastMsg.progressText = `Collected ${(event.data || []).length} model responses`;
                 }
                 console.log('Updated message with stage1:', lastMsg?.stage1);
                 return { ...prev, messages };
@@ -162,6 +168,8 @@ function App() {
                 if (lastMsg) {
                   lastMsg.loading = lastMsg.loading || {};
                   lastMsg.loading.stage2 = true;
+                  const responseCount = lastMsg.stage1?.length || 0;
+                  lastMsg.progressText = `Reviewing ${responseCount} responses`;
                 }
                 return { ...prev, messages };
               });
@@ -180,6 +188,7 @@ function App() {
                   lastMsg.model_metadata = event.metadata?.model_metadata;
                   lastMsg.loading = lastMsg.loading || {};
                   lastMsg.loading.stage2 = false;
+                  lastMsg.progressText = 'Peer review complete';
                 }
                 return { ...prev, messages };
               });
@@ -193,6 +202,10 @@ function App() {
                 if (lastMsg) {
                   lastMsg.loading = lastMsg.loading || {};
                   lastMsg.loading.stage3 = true;
+                  const orchestrator = lastMsg.custom_council?.chairman_model || lastMsg.metadata?.custom_council?.chairman_model;
+                  lastMsg.progressText = orchestrator
+                    ? `Synthesizing final answer with ${orchestrator}`
+                    : 'Synthesizing final answer';
                 }
                 return { ...prev, messages };
               });
@@ -208,6 +221,7 @@ function App() {
                   if (event.council_type) lastMsg.council_type = event.council_type;
                   lastMsg.loading = lastMsg.loading || {};
                   lastMsg.loading.stage3 = false;
+                  lastMsg.progressText = 'Final answer ready';
                 }
                 return { ...prev, messages };
               });
@@ -244,6 +258,7 @@ function App() {
                     stage2: false,
                     stage3: false,
                   };
+                  lastMsg.progressText = 'Council failed';
                 }
                 return { ...prev, messages };
               });
@@ -293,6 +308,7 @@ function App() {
         conversation={currentConversation}
         onSendMessage={handleSendMessage}
         isLoading={isLoading}
+        statusMessage={statusMessage}
       />
     </div>
   );

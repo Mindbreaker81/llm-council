@@ -23,7 +23,7 @@ vi.mock('../api', () => ({
 }));
 
 describe('ChatInterface', () => {
-  it('renders a custom council assistant response', () => {
+  it('renders a custom council assistant response', async () => {
     render(
       <ChatInterface
         isLoading={false}
@@ -62,10 +62,11 @@ describe('ChatInterface', () => {
       />
     );
 
-    expect(screen.getByText('⚙ Custom')).toBeInTheDocument();
+    expect(await screen.findByText('⚙ Custom')).toBeInTheDocument();
     expect(
-      screen.getByText('Select 2-8 models. The active Chairman is the orchestrator that writes the final answer.')
+      screen.getByText('Select 2-8 models for Stage 1 and peer review.')
     ).toBeInTheDocument();
+    expect(screen.getAllByText(/Orchestrator:/).length).toBeGreaterThan(0);
     expect(screen.getByText('Stage 3: Final Council Answer')).toBeInTheDocument();
     expect(screen.getByText('Final custom answer.')).toBeInTheDocument();
   });

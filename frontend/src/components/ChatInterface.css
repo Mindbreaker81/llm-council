@@ -189,6 +189,16 @@
   width: 100%;
 }
 
+.form-status-message {
+  padding: 8px 10px;
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  color: #166534;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .council-type-selector {
   display: flex;
   align-items: center;
@@ -328,6 +338,44 @@
   font-size: 13px;
 }
 
+.custom-orchestrator-step {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 13px;
+}
+
+.custom-orchestrator-step strong {
+  color: #1d4ed8;
+}
+
+.council-run-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #475569;
+  font-size: 13px;
+}
+
+.council-run-summary span {
+  padding-right: 8px;
+  border-right: 1px solid #cbd5e1;
+}
+
+.council-run-summary span:last-child {
+  border-right: 0;
+}
+
 .custom-council-error,
 .custom-council-warning,
 .model-list-status {
@@ -427,7 +475,7 @@
 
 .chairman-button {
   height: 28px;
-  padding: 0 8px;
+  padding: 0 10px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   background: #ffffff;

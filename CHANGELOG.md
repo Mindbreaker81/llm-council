@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 - **Bundle size**: PDF export now loads dynamically, keeping the main frontend bundle smaller.
 - **Dependency audit**: Updated frontend dependencies and overrides so `npm audit` reports zero known vulnerabilities.
 - **Custom council guidance**: Documented that the active Chairman is the orchestrator/final synthesizer for Stage 3.
+- **Council UX**: Added creation feedback, input focus, run summaries, clearer stage progress, and Orchestrator wording in Custom mode.
 
 ### Fixed
 - **Council metadata**: Conversation response models now preserve `council_type`.

@@ -25,6 +25,7 @@ export default function ChatInterface({
   conversation,
   onSendMessage,
   isLoading,
+  statusMessage,
 }) {
   const [input, setInput] = useState('');
   const [councilType, setCouncilType] = useState(
@@ -43,6 +44,7 @@ export default function ChatInterface({
   const [presetCouncils, setPresetCouncils] = useState({});
   const [isExporting, setIsExporting] = useState(false);
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
   const previousConversationIdRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -57,6 +59,7 @@ export default function ChatInterface({
     if (conversation && previousConversationIdRef.current !== conversation.id) {
       previousConversationIdRef.current = conversation.id;
       setCouncilType(getEffectiveConversationCouncilType(conversation));
+      window.setTimeout(() => inputRef.current?.focus(), 0);
     }
   }, [conversation]);
 
@@ -206,6 +209,15 @@ export default function ChatInterface({
   };
 
   const activePreset = presetCouncils[councilType];
+  const activeCouncilModelCount = councilType === 'custom'
+    ? selectedModels.length
+    : activePreset?.models?.length || 0;
+  const activeOrchestrator = councilType === 'custom'
+    ? chairmanModel
+    : activePreset?.chairman_model;
+  const estimatedCalls = councilType === 'custom'
+    ? (customCost?.calls_count || (selectedModels.length > 0 ? selectedModels.length * 2 + 1 : 0))
+    : (activePreset?.models?.length ? activePreset.models.length * 2 + 1 : 0);
 
   const handleKeyDown = (e) => {
     // Submit on Enter (without Shift)
@@ -277,7 +289,7 @@ export default function ChatInterface({
                   {msg.loading?.stage1 && (
                     <div className="stage-loading">
                       <div className="spinner"></div>
-                      <span>Running Stage 1: Collecting individual responses...</span>
+                      <span>{msg.progressText || 'Querying council models...'}</span>
                     </div>
                   )}
                   {msg.stage1 && <Stage1 responses={msg.stage1} />}
@@ -286,7 +298,7 @@ export default function ChatInterface({
                   {msg.loading?.stage2 && (
                     <div className="stage-loading">
                       <div className="spinner"></div>
-                      <span>Running Stage 2: Peer rankings...</span>
+                      <span>{msg.progressText || 'Reviewing model responses...'}</span>
                     </div>
                   )}
                   {msg.stage2 && (
@@ -301,7 +313,7 @@ export default function ChatInterface({
                   {msg.loading?.stage3 && (
                     <div className="stage-loading">
                       <div className="spinner"></div>
-                      <span>Running Stage 3: Final synthesis...</span>
+                      <span>{msg.progressText || 'Synthesizing final answer...'}</span>
                     </div>
                   )}
                   {msg.stage3 && <Stage3 finalResponse={msg.stage3} />}
@@ -344,6 +356,9 @@ export default function ChatInterface({
       </div>
 
       <form className="input-form" onSubmit={handleSubmit}>
+        {statusMessage && (
+          <div className="form-status-message">{statusMessage}</div>
+        )}
         <div className="council-type-selector">
           <label>Council Type:</label>
           <div className="council-type-options">
@@ -398,7 +413,7 @@ export default function ChatInterface({
           <div className="active-models-panel">
             <div className="active-models-header">
               <span>Active models</span>
-              <span>Chairman: {activePreset.chairman_model}</span>
+              <span>Orchestrator: {activePreset.chairman_model}</span>
             </div>
             <div className="active-model-list">
               {activePreset.models.map((model) => (
@@ -413,10 +428,10 @@ export default function ChatInterface({
         {councilType === 'custom' && (
           <div className="custom-council-panel">
             <div className="custom-council-title">
-              Choose custom council models
+              1. Choose council models
             </div>
             <p className="custom-council-help">
-              Select 2-8 models. The active Chairman is the orchestrator that writes the final answer.
+              Select 2-8 models for Stage 1 and peer review.
             </p>
             <div className="custom-council-toolbar">
               <input
@@ -451,7 +466,7 @@ export default function ChatInterface({
 
             <div className="custom-council-summary">
               <span>{selectedModels.length}/8 models selected</span>
-              <span>Chairman: {chairmanModel || 'None'}</span>
+              <span>Orchestrator: {chairmanModel || 'None'}</span>
               {customCost && (
                 <span>
                   Est. {customCost.calls_count} calls · ${Number(customCost.estimated_total_usd).toFixed(6)}
@@ -502,7 +517,7 @@ export default function ChatInterface({
                             onClick={() => setChairmanModel(model.id)}
                             disabled={isLoading}
                           >
-                            Chairman
+                            Orchestrator
                           </button>
                         )}
                       </div>
@@ -511,11 +526,24 @@ export default function ChatInterface({
                 })
               )}
             </div>
+            <div className="custom-orchestrator-step">
+              <strong>2. Choose orchestrator</strong>
+              <span>
+                Click <b>Orchestrator</b> on a selected model. It writes the final Stage 3 answer.
+              </span>
+            </div>
           </div>
         )}
 
+        <div className="council-run-summary">
+          <span>{activeCouncilModelCount || '-'} council models</span>
+          <span>Orchestrator: {activeOrchestrator || 'None'}</span>
+          <span>{estimatedCalls || '-'} estimated calls</span>
+        </div>
+
         <div className="input-form-row">
           <textarea
+            ref={inputRef}
             className="message-input"
             placeholder="Ask your question... (Shift+Enter for new line, Enter to send)"
             value={input}
@@ -529,7 +557,7 @@ export default function ChatInterface({
             className="send-button"
             disabled={!input.trim() || isLoading}
           >
-            Send
+            {councilType === 'custom' ? 'Ask Custom Council' : 'Ask Council'}
           </button>
         </div>
       </form>
