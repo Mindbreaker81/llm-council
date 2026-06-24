@@ -19,6 +19,7 @@ All notable changes to this project will be documented in this file.
 - **Logging**: Replaced verbose debug prints with Python logging.
 - **Bundle size**: PDF export now loads dynamically, keeping the main frontend bundle smaller.
 - **Dependency audit**: Updated frontend dependencies and overrides so `npm audit` reports zero known vulnerabilities.
+- **Custom council guidance**: Documented that the active Chairman is the orchestrator/final synthesizer for Stage 3.
 
 ### Fixed
 - **Council metadata**: Conversation response models now preserve `council_type`.
