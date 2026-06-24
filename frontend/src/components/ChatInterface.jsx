@@ -4,7 +4,6 @@ import Stage1 from './Stage1';
 import Stage2 from './Stage2';
 import Stage3 from './Stage3';
 import { api } from '../api';
-import { exportConversationToPDF } from '../utils/pdfExport';
 import './ChatInterface.css';
 
 const getCouncilTypeDisplay = (councilType) => {
@@ -200,6 +199,7 @@ export default function ChatInterface({
 
     setIsExporting(true);
     try {
+      const { exportConversationToPDF } = await import('../utils/pdfExport');
       await exportConversationToPDF(conversation);
     } catch (error) {
       console.error('Error exporting PDF:', error);

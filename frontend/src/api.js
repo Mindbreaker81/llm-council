@@ -2,6 +2,8 @@
  * API client for the LLM Council backend.
  */
 
+import { createSseEventParser } from './utils/sse';
+
 // Dynamically determine API base URL
 // If running on localhost, use localhost:8001
 // If running on a remote IP/domain, use that IP/domain:8001
@@ -166,41 +168,17 @@ export const api = {
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = '';
-
-    const processEvent = (rawEvent) => {
-      const dataLines = rawEvent
-        .split('\n')
-        .filter((line) => line.startsWith('data: '))
-        .map((line) => line.slice(6));
-
-      if (dataLines.length === 0) return;
-
-      try {
-        const event = JSON.parse(dataLines.join('\n'));
-        onEvent(event.type, event);
-      } catch (e) {
-        console.error('Failed to parse SSE event:', e);
-      }
-    };
+    const parser = createSseEventParser(onEvent);
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) {
-        buffer += decoder.decode();
-        if (buffer.trim()) {
-          processEvent(buffer);
-        }
+        parser.push(decoder.decode());
+        parser.flush();
         break;
       }
 
-      buffer += decoder.decode(value, { stream: true });
-      const events = buffer.split('\n\n');
-      buffer = events.pop() || '';
-
-      for (const event of events) {
-        processEvent(event);
-      }
+      parser.push(decoder.decode(value, { stream: true }));
     }
   },
 };

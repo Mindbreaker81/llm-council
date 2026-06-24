@@ -196,6 +196,21 @@ Then open http://localhost:5173 in your browser.
    - Stage 3 shows the final synthesized answer
    - Each response displays the council type used (💎 Premium, 💰 Economic, 🆓 Free, ⚙ Custom)
 
+## Testing
+
+Backend:
+```bash
+python3 -m unittest discover -s tests
+```
+
+Frontend:
+```bash
+cd frontend
+npm run test
+npm run lint
+npm run build
+```
+
 ## Features
 
 - **Four Council Types**: Choose between Premium, Economic, Free, or Custom models when sending messages
