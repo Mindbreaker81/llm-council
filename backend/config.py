@@ -12,10 +12,12 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 COUNCIL_TYPE_PREMIUM = "premium"
 COUNCIL_TYPE_ECONOMIC = "economic"
 COUNCIL_TYPE_FREE = "free"
+COUNCIL_TYPE_CUSTOM = "custom"
 VALID_COUNCIL_TYPES = {
     COUNCIL_TYPE_PREMIUM,
     COUNCIL_TYPE_ECONOMIC,
     COUNCIL_TYPE_FREE,
+    COUNCIL_TYPE_CUSTOM,
 }
 
 # Premium Council members - list of OpenRouter model identifiers

@@ -172,7 +172,9 @@ def add_assistant_message(
     stage1: List[Dict[str, Any]],
     stage2: List[Dict[str, Any]],
     stage3: Dict[str, Any],
-    council_type: Optional[str] = None
+    council_type: Optional[str] = None,
+    custom_council: Optional[Dict[str, Any]] = None,
+    model_metadata: Optional[Dict[str, Any]] = None
 ):
     """
     Add an assistant message with all 3 stages to a conversation.
@@ -183,6 +185,8 @@ def add_assistant_message(
         stage2: List of model rankings
         stage3: Final synthesized response
         council_type: Type of council used for this message
+        custom_council: Custom council model selection used for this message
+        model_metadata: Snapshot of model metadata at send time
     """
     with conversation_lock(conversation_id):
         conversation = get_conversation(conversation_id)
@@ -198,6 +202,10 @@ def add_assistant_message(
         
         if council_type:
             message["council_type"] = council_type
+        if custom_council:
+            message["custom_council"] = custom_council
+        if model_metadata:
+            message["model_metadata"] = model_metadata
 
         conversation["messages"].append(message)
 

@@ -13,6 +13,7 @@ from .config import (
     COUNCIL_TYPE_PREMIUM,
     COUNCIL_TYPE_ECONOMIC,
     COUNCIL_TYPE_FREE,
+    COUNCIL_TYPE_CUSTOM,
     COUNCIL_MODELS,
     CHAIRMAN_MODEL,
 )
@@ -20,17 +21,25 @@ from .config import (
 logger = logging.getLogger(__name__)
 
 
-def get_council_config(council_type: str = COUNCIL_TYPE_PREMIUM) -> Tuple[List[str], str]:
+def get_council_config(
+    council_type: str = COUNCIL_TYPE_PREMIUM,
+    custom_council: Optional[Dict[str, Any]] = None
+) -> Tuple[List[str], str]:
     """
     Get council models and chairman model based on council type.
 
     Args:
-        council_type: Type of council ("premium", "economic", or "free")
+        council_type: Type of council ("premium", "economic", "free", or "custom")
+        custom_council: Validated custom council configuration
 
     Returns:
         Tuple of (council_models list, chairman_model string)
     """
-    if council_type == COUNCIL_TYPE_ECONOMIC:
+    if council_type == COUNCIL_TYPE_CUSTOM:
+        if not custom_council:
+            raise ValueError("custom_council is required for custom council type")
+        return custom_council["models"], custom_council["chairman_model"]
+    elif council_type == COUNCIL_TYPE_ECONOMIC:
         return COUNCIL_MODELS_ECONOMIC, CHAIRMAN_MODEL_ECONOMIC
     elif council_type == COUNCIL_TYPE_FREE:
         return COUNCIL_MODELS_FREE, CHAIRMAN_MODEL_FREE
@@ -40,7 +49,8 @@ def get_council_config(council_type: str = COUNCIL_TYPE_PREMIUM) -> Tuple[List[s
 
 async def stage1_collect_responses(
     user_query: str,
-    council_models: Optional[List[str]] = None
+    council_models: Optional[List[str]] = None,
+    use_fallback: bool = True
 ) -> List[Dict[str, Any]]:
     """
     Stage 1: Collect individual responses from all council models.
@@ -62,7 +72,7 @@ async def stage1_collect_responses(
         council_models,
         messages,
         extract_final_content_flag=False,
-        use_fallback=True
+        use_fallback=use_fallback
     )
 
     # Format results - keep original for user transparency, extract final for Stage 2
@@ -99,7 +109,8 @@ async def stage1_collect_responses(
 async def stage2_collect_rankings(
     user_query: str,
     stage1_results: List[Dict[str, Any]],
-    council_models: Optional[List[str]] = None
+    council_models: Optional[List[str]] = None,
+    use_fallback: bool = True
 ) -> Tuple[List[Dict[str, Any]], Dict[str, str]]:
     """
     Stage 2: Each model ranks the anonymized responses.
@@ -169,7 +180,7 @@ Now provide your evaluation and ranking:"""
         council_models,
         messages,
         extract_final_content_flag=True,
-        use_fallback=True
+        use_fallback=use_fallback
     )
 
     # Format results
@@ -469,34 +480,47 @@ Title:"""
 
 async def run_full_council(
     user_query: str,
-    council_type: str = COUNCIL_TYPE_PREMIUM
+    council_type: str = COUNCIL_TYPE_PREMIUM,
+    custom_council: Optional[Dict[str, Any]] = None
 ) -> Tuple[List, List, Dict, Dict]:
     """
     Run the complete 3-stage council process.
 
     Args:
         user_query: The user's question
-        council_type: Type of council to use ("premium" or "economic")
+        council_type: Type of council to use
+        custom_council: Validated custom council config for custom type
 
     Returns:
         Tuple of (stage1_results, stage2_results, stage3_result, metadata)
     """
     # Get council configuration based on type
-    council_models, chairman_model = get_council_config(council_type)
+    council_models, chairman_model = get_council_config(council_type, custom_council)
+    use_fallback = council_type != COUNCIL_TYPE_CUSTOM
 
     # Stage 1: Collect individual responses
-    stage1_results = await stage1_collect_responses(user_query, council_models)
+    stage1_results = await stage1_collect_responses(
+        user_query,
+        council_models,
+        use_fallback=use_fallback
+    )
 
     # If no models responded successfully, return error
     if not stage1_results:
+        metadata = {"council_type": council_type}
+        if custom_council:
+            metadata["custom_council"] = custom_council
         return [], [], {
             "model": "error",
             "response": "All models failed to respond. Please try again."
-        }, {}
+        }, metadata
 
     # Stage 2: Collect rankings
     stage2_results, label_to_model = await stage2_collect_rankings(
-        user_query, stage1_results, council_models
+        user_query,
+        stage1_results,
+        council_models,
+        use_fallback=use_fallback
     )
 
     # Calculate aggregate rankings
@@ -517,5 +541,7 @@ async def run_full_council(
         "aggregate_rankings": aggregate_rankings,
         "council_type": council_type
     }
+    if custom_council:
+        metadata["custom_council"] = custom_council
 
     return stage1_results, stage2_results, stage3_result, metadata

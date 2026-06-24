@@ -13,7 +13,7 @@ import os
 
 from . import storage
 from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings, get_council_config
-from .config import COUNCIL_TYPE_PREMIUM, VALID_COUNCIL_TYPES
+from .config import COUNCIL_TYPE_CUSTOM, COUNCIL_TYPE_PREMIUM, VALID_COUNCIL_TYPES
 from .model_catalog import (
     filter_models,
     find_model,
@@ -71,13 +71,20 @@ class CreateConversationRequest(BaseModel):
     )
 
 
+class CustomCouncilRequest(BaseModel):
+    """Custom council model selection."""
+    models: List[str]
+    chairman_model: Optional[str] = None
+
+
 class SendMessageRequest(BaseModel):
     """Request to send a message in a conversation."""
     content: str
     council_type: str = Field(
         default=COUNCIL_TYPE_PREMIUM,
-        description="Type of council: premium, economic, or free"
+        description="Type of council: premium, economic, free, or custom"
     )
+    custom_council: Optional[CustomCouncilRequest] = None
 
 
 class ValidateCouncilRequest(BaseModel):
@@ -117,6 +124,37 @@ def normalize_council_type(council_type: str) -> str:
     if council_type in VALID_COUNCIL_TYPES:
         return council_type
     return COUNCIL_TYPE_PREMIUM
+
+
+async def prepare_custom_council(request: SendMessageRequest) -> Optional[Dict[str, Any]]:
+    """Validate and normalize a custom council request for execution and storage."""
+    if normalize_council_type(request.council_type) != COUNCIL_TYPE_CUSTOM:
+        return None
+    if request.custom_council is None:
+        raise HTTPException(status_code=400, detail="custom_council is required for custom council type")
+
+    catalog = await get_models()
+    validation = validate_custom_council_from_catalog(
+        catalog,
+        request.custom_council.models,
+        request.custom_council.chairman_model,
+    )
+    if not validation["valid"]:
+        raise HTTPException(status_code=400, detail={
+            "message": "Invalid custom council",
+            "errors": validation["errors"],
+            "warnings": validation["warnings"],
+        })
+
+    custom_council = {
+        "models": validation["model_ids"],
+        "chairman_model": validation["chairman_model_id"],
+    }
+    return {
+        "custom_council": custom_council,
+        "model_metadata": validation["model_metadata"],
+        "warnings": validation["warnings"],
+    }
 
 
 @app.get("/")
@@ -220,6 +258,9 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
+    council_type = normalize_council_type(request.council_type)
+    custom_context = await prepare_custom_council(request)
+
     # Check if this is the first message
     is_first_message = len(conversation["messages"]) == 0
 
@@ -231,14 +272,17 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
         title = await generate_conversation_title(request.content)
         storage.update_conversation_title(conversation_id, title)
 
-    council_type = normalize_council_type(request.council_type)
-    
     # Run the 3-stage council process
     logger.info("Running council response with type %s", council_type)
     stage1_results, stage2_results, stage3_result, metadata = await run_full_council(
         request.content,
-        council_type=council_type
+        council_type=council_type,
+        custom_council=custom_context["custom_council"] if custom_context else None
     )
+    if custom_context:
+        metadata["custom_council"] = custom_context["custom_council"]
+        metadata["model_metadata"] = custom_context["model_metadata"]
+        metadata["warnings"] = custom_context["warnings"]
 
     # Add assistant message with all stages (include council_type for display in chat and PDF)
     storage.add_assistant_message(
@@ -246,7 +290,9 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
         stage1_results,
         stage2_results,
         stage3_result,
-        council_type=council_type
+        council_type=council_type,
+        custom_council=custom_context["custom_council"] if custom_context else None,
+        model_metadata=custom_context["model_metadata"] if custom_context else None
     )
 
     # Return the complete response with metadata
@@ -270,6 +316,7 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     council_type = normalize_council_type(request.council_type)
+    custom_context = await prepare_custom_council(request)
 
     # Check if this is the first message
     is_first_message = len(conversation["messages"]) == 0
@@ -286,11 +333,17 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
 
             # Get council configuration
             logger.info("Running streaming council response with type %s", council_type)
-            council_models, chairman_model = get_council_config(council_type)
+            custom_council = custom_context["custom_council"] if custom_context else None
+            use_fallback = council_type != COUNCIL_TYPE_CUSTOM
+            council_models, chairman_model = get_council_config(council_type, custom_council)
 
             # Stage 1: Collect responses (include council_type so frontend has it even when stage2 is skipped)
             yield f"data: {json.dumps({'type': 'stage1_start'})}\n\n"
-            stage1_results = await stage1_collect_responses(request.content, council_models)
+            stage1_results = await stage1_collect_responses(
+                request.content,
+                council_models,
+                use_fallback=use_fallback
+            )
             logger.info("Stage 1 completed with %s results", len(stage1_results))
             yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results, 'council_type': council_type})}\n\n"
 
@@ -302,9 +355,23 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                 aggregate_rankings = []
             else:
                 yield f"data: {json.dumps({'type': 'stage2_start'})}\n\n"
-                stage2_results, label_to_model = await stage2_collect_rankings(request.content, stage1_results, council_models)
+                stage2_results, label_to_model = await stage2_collect_rankings(
+                    request.content,
+                    stage1_results,
+                    council_models,
+                    use_fallback=use_fallback
+                )
                 aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
-                yield f"data: {json.dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings, 'council_type': council_type}})}\n\n"
+                metadata = {
+                    'label_to_model': label_to_model,
+                    'aggregate_rankings': aggregate_rankings,
+                    'council_type': council_type,
+                }
+                if custom_context:
+                    metadata['custom_council'] = custom_context["custom_council"]
+                    metadata['model_metadata'] = custom_context["model_metadata"]
+                    metadata['warnings'] = custom_context["warnings"]
+                yield f"data: {json.dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': metadata})}\n\n"
 
             # Stage 3: Synthesize final answer (only if we have results)
             if not stage1_results:
@@ -336,7 +403,9 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                 stage1_results,
                 stage2_results,
                 stage3_result,
-                council_type=council_type
+                council_type=council_type,
+                custom_council=custom_context["custom_council"] if custom_context else None,
+                model_metadata=custom_context["model_metadata"] if custom_context else None
             )
 
             # Send completion event
