@@ -15,6 +15,13 @@ const getCouncilTypeDisplay = (councilType) => {
   return councilType || 'Premium';
 };
 
+const getEffectiveConversationCouncilType = (conversation) => {
+  const latestAssistant = [...(conversation?.messages || [])]
+    .reverse()
+    .find((message) => message.role === 'assistant' && message.council_type);
+  return latestAssistant?.council_type || conversation?.council_type || 'premium';
+};
+
 export default function ChatInterface({
   conversation,
   onSendMessage,
@@ -31,10 +38,12 @@ export default function ChatInterface({
   const [selectedModels, setSelectedModels] = useState([]);
   const [chairmanModel, setChairmanModel] = useState('');
   const [customWarnings, setCustomWarnings] = useState([]);
+  const [customCost, setCustomCost] = useState(null);
   const [modelError, setModelError] = useState('');
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const messagesEndRef = useRef(null);
+  const previousConversationIdRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -45,9 +54,9 @@ export default function ChatInterface({
   }, [conversation]);
 
   useEffect(() => {
-    // Update council type when conversation changes
-    if (conversation?.council_type) {
-      setCouncilType(conversation.council_type);
+    if (conversation && previousConversationIdRef.current !== conversation.id) {
+      previousConversationIdRef.current = conversation.id;
+      setCouncilType(getEffectiveConversationCouncilType(conversation));
     }
   }, [conversation]);
 
@@ -92,6 +101,37 @@ export default function ChatInterface({
     }
   }, [selectedModels, chairmanModel]);
 
+  useEffect(() => {
+    if (councilType !== 'custom' || selectedModels.length < 2 || !chairmanModel) {
+      setCustomCost(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timeout = setTimeout(async () => {
+      try {
+        const validation = await api.validateCouncil(selectedModels, chairmanModel);
+        if (cancelled) return;
+        setCustomWarnings(validation.warnings || []);
+        setCustomCost(validation.estimated_cost || null);
+        if (!validation.valid) {
+          setModelError((validation.errors || ['Invalid custom council']).join(' '));
+        } else {
+          setModelError('');
+        }
+      } catch {
+        if (!cancelled) {
+          setCustomCost(null);
+        }
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [councilType, selectedModels, chairmanModel]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (input.trim() && !isLoading) {
@@ -131,6 +171,7 @@ export default function ChatInterface({
 
   const toggleSelectedModel = (modelId) => {
     setModelError('');
+    setCustomCost(null);
     setSelectedModels((prev) => {
       if (prev.includes(modelId)) {
         return prev.filter((item) => item !== modelId);
@@ -365,6 +406,11 @@ export default function ChatInterface({
             <div className="custom-council-summary">
               <span>{selectedModels.length}/8 models selected</span>
               <span>Chairman: {chairmanModel || 'None'}</span>
+              {customCost && (
+                <span>
+                  Est. {customCost.calls_count} calls · ${Number(customCost.estimated_total_usd).toFixed(6)}
+                </span>
+              )}
             </div>
 
             {modelError && <div className="custom-council-error">{modelError}</div>}

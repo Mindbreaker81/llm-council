@@ -149,6 +149,9 @@ async def prepare_custom_council(request: SendMessageRequest) -> Optional[Dict[s
     custom_council = {
         "models": validation["model_ids"],
         "chairman_model": validation["chairman_model_id"],
+        "chairman_context_length": (
+            validation["chairman_model"] or {}
+        ).get("context_length"),
     }
     return {
         "custom_council": custom_council,
@@ -322,9 +325,15 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
     is_first_message = len(conversation["messages"]) == 0
 
     async def event_generator():
+        user_message_saved = False
+        assistant_message_saved = False
+        stage1_results = []
+        stage2_results = []
+        stage3_result = None
         try:
             # Add user message
             storage.add_user_message(conversation_id, request.content)
+            user_message_saved = True
 
             # Start title generation in parallel (don't await yet)
             title_task = None
@@ -387,7 +396,8 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                     stage1_results,
                     stage2_results,
                     chairman_model,
-                    council_type
+                    council_type,
+                    custom_council.get("chairman_context_length") if custom_council else None
                 )
                 yield f"data: {json.dumps({'type': 'stage3_complete', 'data': stage3_result, 'council_type': council_type})}\n\n"
 
@@ -407,12 +417,30 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                 custom_council=custom_context["custom_council"] if custom_context else None,
                 model_metadata=custom_context["model_metadata"] if custom_context else None
             )
+            assistant_message_saved = True
 
             # Send completion event
             yield f"data: {json.dumps({'type': 'complete'})}\n\n"
 
         except Exception as e:
             logger.exception("Streaming council response failed")
+            if user_message_saved and not assistant_message_saved:
+                error_stage3 = {
+                    "model": "error",
+                    "response": f"Error: {str(e)}"
+                }
+                try:
+                    storage.add_assistant_message(
+                        conversation_id,
+                        stage1_results,
+                        stage2_results,
+                        stage3_result or error_stage3,
+                        council_type=council_type,
+                        custom_council=custom_context["custom_council"] if custom_context else None,
+                        model_metadata=custom_context["model_metadata"] if custom_context else None
+                    )
+                except Exception:
+                    logger.exception("Failed to persist streaming error response")
             # Send error event
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 

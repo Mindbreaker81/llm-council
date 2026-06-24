@@ -203,7 +203,8 @@ async def stage3_synthesize_final(
     stage1_results: List[Dict[str, Any]],
     stage2_results: List[Dict[str, Any]],
     chairman_model: Optional[str] = None,
-    council_type: str = COUNCIL_TYPE_PREMIUM
+    council_type: str = COUNCIL_TYPE_PREMIUM,
+    max_context_tokens: Optional[int] = None
 ) -> Dict[str, Any]:
     """
     Stage 3: Chairman synthesizes final response.
@@ -214,6 +215,7 @@ async def stage3_synthesize_final(
         stage2_results: Rankings from Stage 2
         chairman_model: Model identifier for chairman. If None, uses default.
         council_type: Type of council (for context limit detection)
+        max_context_tokens: Context limit for the chairman model, if known
 
     Returns:
         Dict with 'model' and 'response' keys
@@ -233,7 +235,7 @@ async def stage3_synthesize_final(
     ])
 
     # Check context limits (free models typically have 32k limit)
-    max_tokens = 32000 if council_type == COUNCIL_TYPE_FREE else 128000
+    max_tokens = max_context_tokens or (32000 if council_type == COUNCIL_TYPE_FREE else 128000)
     use_summary = check_context_limits(stage1_text, stage2_text, max_tokens)
     
     if use_summary:
@@ -532,7 +534,8 @@ async def run_full_council(
         stage1_results,
         stage2_results,
         chairman_model,
-        council_type
+        council_type,
+        custom_council.get("chairman_context_length") if custom_council else None
     )
 
     # Prepare metadata

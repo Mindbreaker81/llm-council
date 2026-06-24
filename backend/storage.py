@@ -131,13 +131,18 @@ def list_conversations() -> List[Dict[str, Any]]:
             path = os.path.join(DATA_DIR, filename)
             with open(path, 'r') as f:
                 data = json.load(f)
+                latest_council_type = data.get("council_type", "premium")
+                for message in reversed(data.get("messages", [])):
+                    if message.get("role") == "assistant" and message.get("council_type"):
+                        latest_council_type = message["council_type"]
+                        break
                 # Return metadata only
                 conversations.append({
                     "id": data["id"],
                     "created_at": data["created_at"],
                     "title": data.get("title", "New Conversation"),
                     "message_count": len(data["messages"]),
-                    "council_type": data.get("council_type", "premium")
+                    "council_type": latest_council_type
                 })
 
     # Sort by creation time, newest first
