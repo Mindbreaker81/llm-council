@@ -9,7 +9,7 @@ All notable changes to this project will be documented in this file.
 - **OpenRouter catalog API**: Added backend endpoints to list, inspect, and validate models for custom councils.
 - **Model metadata**: Custom council messages store the selected models, Chairman, and model metadata snapshot.
 - **Backend tests**: Added unit coverage for model catalog filtering, free model detection, custom validation, and council config resolution.
-- **Frontend SSE parser test**: Added a dependency-free Node test for chunked Server-Sent Events parsing.
+- **Frontend tests**: Added a dependency-free Node test for chunked Server-Sent Events parsing and a Vitest/Testing Library render test for custom council responses.
 
 ### Improved
 - **Streaming robustness**: SSE parsing now buffers partial chunks and handles UTF-8 split across reads.
@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file.
 - **Validation**: Council type validation is centralized and custom councils are validated server-side before sending.
 - **Logging**: Replaced verbose debug prints with Python logging.
 - **Bundle size**: PDF export now loads dynamically, keeping the main frontend bundle smaller.
+- **Dependency audit**: Updated frontend dependencies and overrides so `npm audit` reports zero known vulnerabilities.
 
 ### Fixed
 - **Council metadata**: Conversation response models now preserve `council_type`.
