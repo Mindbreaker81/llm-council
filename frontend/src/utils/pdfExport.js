@@ -51,6 +51,50 @@ function getShortModelName(model) {
   return model.split('/')[1] || model;
 }
 
+function getFullModelName(model) {
+  return model || 'Unknown model';
+}
+
+function uniqueValues(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function formatPrice(value) {
+  if (value === undefined || value === null || value === '') return 'n/a';
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return String(value);
+  if (numeric === 0) return 'free';
+  return `$${numeric.toExponential(3)} / token`;
+}
+
+function getExportSource() {
+  if (typeof window === 'undefined' || !window.location?.origin) {
+    return 'LLM Council';
+  }
+  return `LLM Council (${window.location.origin})`;
+}
+
+function getMessageMetadata(msg, conversation) {
+  const effectiveCouncilType = msg.council_type || conversation.council_type;
+  const customCouncil = msg.custom_council || msg.metadata?.custom_council;
+  const stage1Models = (msg.stage1 || []).map((response) => response.model);
+  const stage2Models = (msg.stage2 || []).map((ranking) => ranking.model);
+  const orchestrator = msg.stage3?.model || customCouncil?.chairman_model;
+  const councilModels = uniqueValues(customCouncil?.models || stage1Models);
+  const evaluatedBy = uniqueValues(stage2Models);
+  const allModels = uniqueValues([...councilModels, ...evaluatedBy, orchestrator ? [orchestrator] : []]);
+
+  return {
+    councilType: effectiveCouncilType,
+    customCouncil,
+    councilModels,
+    evaluatedBy,
+    orchestrator,
+    allModels,
+    modelMetadata: msg.model_metadata || msg.metadata?.model_metadata || {}
+  };
+}
+
 /**
  * Gets emoji and name for council type
  */
@@ -79,12 +123,76 @@ function formatDate(dateString) {
   });
 }
 
+function addMetadataTable(content, rows) {
+  content.push({
+    table: {
+      widths: [130, '*'],
+      body: rows.map(([label, value]) => [
+        { text: label, style: 'metadataLabel' },
+        { text: value || 'n/a', style: 'metadataValue' }
+      ])
+    },
+    layout: 'lightHorizontalLines',
+    margin: [0, 0, 0, 15]
+  });
+}
+
+function addModelSnapshot(content, modelMetadata, models) {
+  const snapshotRows = uniqueValues(models)
+    .filter((modelId) => modelMetadata[modelId])
+    .map((modelId) => {
+      const metadata = modelMetadata[modelId];
+      const pricing = metadata.pricing || {};
+      return [
+        { text: modelId, style: 'tableCell', bold: true },
+        { text: metadata.name || modelId, style: 'tableCell' },
+        { text: metadata.context_length ? metadata.context_length.toLocaleString('en-US') : 'n/a', style: 'tableCell' },
+        { text: formatPrice(pricing.prompt), style: 'tableCell' },
+        { text: formatPrice(pricing.completion), style: 'tableCell' }
+      ];
+    });
+
+  if (snapshotRows.length === 0) return;
+
+  content.push(
+    {
+      text: 'OpenRouter Model Snapshot',
+      style: 'stageTitle',
+      color: '#4a90e2',
+      margin: [0, 12, 0, 8]
+    },
+    {
+      text: 'Captured when the custom council was validated. Pricing is provider metadata and may change later.',
+      style: 'infoText',
+      margin: [0, 0, 0, 8]
+    },
+    {
+      table: {
+        headerRows: 1,
+        widths: ['*', '*', 58, 58, 68],
+        body: [
+          [
+            { text: 'Model ID', style: 'tableHeader' },
+            { text: 'Name', style: 'tableHeader' },
+            { text: 'Context', style: 'tableHeader' },
+            { text: 'Input', style: 'tableHeader' },
+            { text: 'Output', style: 'tableHeader' }
+          ],
+          ...snapshotRows
+        ]
+      },
+      margin: [0, 0, 0, 18]
+    }
+  );
+}
+
 /**
  * Generates data structure for pdfmake
  */
-function generatePdfContent(conversation) {
+export function generatePdfContent(conversation) {
   const councilType = getCouncilTypeDisplay(conversation.council_type);
   const formattedDate = formatDate(conversation.created_at);
+  const exportedAt = formatDate(new Date().toISOString());
   
   const content = [];
   
@@ -108,7 +216,7 @@ function generatePdfContent(conversation) {
           color: '#666666'
         },
         {
-          text: `Council Type: ${councilType.emoji} ${councilType.name}`,
+          text: `Council Type: ${councilType.name}`,
           fontSize: 10,
           color: '#666666',
           alignment: 'right'
@@ -129,8 +237,21 @@ function generatePdfContent(conversation) {
         }
       ],
       margin: [0, 0, 0, 20]
+    },
+    {
+      text: 'Export Details',
+      style: 'stageTitle',
+      color: '#4a90e2',
+      margin: [0, 0, 0, 8]
     }
   );
+
+  addMetadataTable(content, [
+    ['Source', getExportSource()],
+    ['Conversation ID', conversation.id || 'n/a'],
+    ['Conversation created', formattedDate || 'n/a'],
+    ['Exported at', exportedAt || 'n/a']
+  ]);
   
   // Messages
   conversation.messages.forEach((msg, index) => {
@@ -172,15 +293,25 @@ function generatePdfContent(conversation) {
     // Assistant response
     if (msg.role === 'assistant') {
       // Fallback: use message council_type, or conversation (legacy messages)
-      const effectiveCouncilType = msg.council_type || conversation.council_type;
-      const msgCouncilType = getCouncilTypeDisplay(effectiveCouncilType);
+      const messageMetadata = getMessageMetadata(msg, conversation);
+      const msgCouncilType = getCouncilTypeDisplay(messageMetadata.councilType);
 
       content.push({
-        text: `LLM Council Response ${msgCouncilType.emoji} ${msgCouncilType.name}`,
+        text: `LLM Council Response ${msgCouncilType.name}`,
         style: 'sectionTitle',
         color: '#4a90e2',
         margin: [0, 0, 0, 15]
       });
+
+      addMetadataTable(content, [
+        ['Council type', msgCouncilType.name],
+        ['Council models', messageMetadata.councilModels.map(getFullModelName).join('\n')],
+        ['Peer reviewers', messageMetadata.evaluatedBy.map(getFullModelName).join('\n')],
+        ['Orchestrator', getFullModelName(messageMetadata.orchestrator)],
+        ['All models used', messageMetadata.allModels.map(getFullModelName).join('\n')]
+      ]);
+
+      addModelSnapshot(content, messageMetadata.modelMetadata, messageMetadata.allModels);
       
       // Stage 1: Individual Responses
       if (msg.stage1 && msg.stage1.length > 0) {
@@ -196,7 +327,7 @@ function generatePdfContent(conversation) {
         msg.stage1.forEach((response, idx) => {
           content.push(
             {
-              text: getShortModelName(response.model),
+              text: getFullModelName(response.model),
               style: 'modelName',
               margin: [0, idx > 0 ? 10 : 0, 0, 5]
             },
@@ -245,7 +376,7 @@ function generatePdfContent(conversation) {
         msg.stage2.forEach((ranking, idx) => {
           content.push(
             {
-              text: `Evaluation by ${getShortModelName(ranking.model)}`,
+              text: `Evaluation by ${getFullModelName(ranking.model)}`,
               style: 'modelName',
               margin: [0, idx > 0 ? 15 : 0, 0, 5]
             },
@@ -260,7 +391,7 @@ function generatePdfContent(conversation) {
           if (ranking.parsed_ranking && ranking.parsed_ranking.length > 0) {
             const rankingList = ranking.parsed_ranking.map((label, rankIdx) => {
               const modelName = msg.metadata?.label_to_model?.[label]
-                ? getShortModelName(msg.metadata.label_to_model[label])
+                ? getFullModelName(msg.metadata.label_to_model[label])
                 : label;
               return `${rankIdx + 1}. ${modelName}`;
             }).join('\n');
@@ -347,11 +478,11 @@ function generatePdfContent(conversation) {
             color: '#4caf50',
             margin: [0, 20, 0, 10]
           },
-          {
-            text: `Chairman: ${getShortModelName(msg.stage3.model)}`,
-            style: 'modelName',
-            margin: [0, 0, 0, 8]
-          },
+            {
+              text: `Orchestrator: ${getFullModelName(msg.stage3.model)}`,
+              style: 'modelName',
+              margin: [0, 0, 0, 8]
+            },
           {
             text: markdownToText(msg.stage3.response),
             style: 'finalAnswer',
@@ -379,7 +510,7 @@ function generatePdfContent(conversation) {
       margin: [0, 30, 0, 10]
     },
     {
-      text: `Generated by LLM Council - ${new Date().toLocaleDateString('en-US')}`,
+      text: `Generated by ${getExportSource()} - ${exportedAt}`,
       style: 'footer',
       alignment: 'center',
       margin: [0, 10, 0, 0]
@@ -432,7 +563,8 @@ export async function exportConversationToPDF(conversation) {
         modelName: {
           fontSize: 12,
           bold: true,
-          color: '#333333'
+          color: '#333333',
+          noWrap: false
         },
         userMessage: {
           fontSize: 11,
@@ -469,7 +601,19 @@ export async function exportConversationToPDF(conversation) {
         },
         tableCell: {
           fontSize: 10,
-          color: '#333333'
+          color: '#333333',
+          noWrap: false
+        },
+        metadataLabel: {
+          fontSize: 9,
+          bold: true,
+          color: '#475569',
+          fillColor: '#f8fafc'
+        },
+        metadataValue: {
+          fontSize: 9,
+          color: '#333333',
+          noWrap: false
         },
         footer: {
           fontSize: 9,
@@ -481,7 +625,8 @@ export async function exportConversationToPDF(conversation) {
       info: {
         title: `LLM Council - ${conversation.title || 'Conversation'}`,
         author: 'LLM Council',
-        subject: 'LLM Council Conversation'
+        subject: 'LLM Council Conversation',
+        keywords: 'LLM Council, OpenRouter, model council, AI conversation export'
       }
     };
     

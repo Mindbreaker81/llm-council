@@ -216,7 +216,7 @@ npm run build
 ## Features
 
 - **Four Council Types**: Choose between Premium, Economic, Free, or Custom models when sending messages
-- **Custom Council Selector**: Search OpenRouter's model catalog, filter free/high-context models, and choose the Chairman per message
+- **Custom Council Selector**: Search OpenRouter's model catalog, filter free/high-context models, and choose the Orchestrator per message
 - **Council Type Display**: Each response shows which council type was used (💎 Premium, 💰 Economic, 🆓 Free, ⚙ Custom)
 - **Automatic Fallback**: Free models automatically fallback to paid versions if unavailable
 - **Reasoning Token Handling**: Properly handles reasoning tokens from models like DeepSeek R1
@@ -231,9 +231,9 @@ npm run build
 - You can use different council types for different messages in the same conversation
 - The council type used is displayed in each assistant response
 - Conversations show the council type in the sidebar list
-- The active preset models and Chairman are visible before sending a message
+- The active preset models and Orchestrator are visible before sending a message
 
-### Custom Council Chairman
+### Custom Council Orchestrator
 - In Custom mode, selected models become the Stage 1 and Stage 2 council members
 - The active **Orchestrator** is the Chairman/final synthesizer that writes Stage 3
 - If you do not choose one manually, the first selected model becomes the Orchestrator
@@ -258,9 +258,11 @@ npm run build
 - **Error Handling**: Failed models are excluded from results, and free models automatically try paid fallback versions
 - **PDF Export**: Export complete conversations to PDF with selectable text
   - Includes all user messages and assistant responses
+  - Includes export provenance, conversation ID, creation/export timestamps, council type, full model IDs, peer reviewers, and Orchestrator
+  - Includes OpenRouter model snapshot metadata for Custom councils when available, including context length and input/output pricing
   - Stage 1: All individual model responses (without reasoning tokens)
   - Stage 2: Complete peer evaluations, extracted rankings, and aggregate rankings table
-  - Stage 3: Final Chairman response
+  - Stage 3: Final Orchestrator response
   - Click the "Export PDF" button at the end of any conversation
 
 ## Port Configuration

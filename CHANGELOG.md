@@ -5,12 +5,13 @@ All notable changes to this project will be documented in this file.
 ## [2.4.0] - 2026-06-24
 
 ### Added
-- **Custom council type**: Users can choose 2-8 OpenRouter text models and a Chairman per message.
+- **Custom council type**: Users can choose 2-8 OpenRouter text models and an Orchestrator per message.
 - **OpenRouter catalog API**: Added backend endpoints to list, inspect, and validate models for custom councils.
-- **Council preset visibility**: Added an API/UI view of active preset models and Chairman for Premium, Economic, and Free councils.
-- **Model metadata**: Custom council messages store the selected models, Chairman, and model metadata snapshot.
+- **Council preset visibility**: Added an API/UI view of active preset models and Orchestrator for Premium, Economic, and Free councils.
+- **Model metadata**: Custom council messages store the selected models, Orchestrator, and model metadata snapshot.
 - **Backend tests**: Added unit coverage for model catalog filtering, free model detection, custom validation, and council config resolution.
 - **Frontend tests**: Added a dependency-free Node test for chunked Server-Sent Events parsing and a Vitest/Testing Library render test for custom council responses.
+- **PDF metadata coverage**: Added a frontend test that verifies exported PDF content includes provenance, full model IDs, Orchestrator, and OpenRouter snapshot metadata.
 
 ### Improved
 - **Streaming robustness**: SSE parsing now buffers partial chunks and handles UTF-8 split across reads.
@@ -19,8 +20,9 @@ All notable changes to this project will be documented in this file.
 - **Logging**: Replaced verbose debug prints with Python logging.
 - **Bundle size**: PDF export now loads dynamically, keeping the main frontend bundle smaller.
 - **Dependency audit**: Updated frontend dependencies and overrides so `npm audit` reports zero known vulnerabilities.
-- **Custom council guidance**: Documented that the active Chairman is the orchestrator/final synthesizer for Stage 3.
+- **Custom council guidance**: Documented that the active Orchestrator is the final synthesizer for Stage 3.
 - **Council UX**: Added creation feedback, input focus, run summaries, clearer stage progress, and Orchestrator wording in Custom mode.
+- **PDF export traceability**: PDFs now include export provenance, conversation metadata, full model IDs, peer reviewers, Orchestrator, and Custom council OpenRouter pricing/context snapshots.
 
 ### Fixed
 - **Council metadata**: Conversation response models now preserve `council_type`.
