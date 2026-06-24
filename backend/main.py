@@ -1,10 +1,10 @@
 """FastAPI backend for LLM Council."""
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import uuid
 import json
 import asyncio
@@ -14,6 +14,13 @@ import os
 from . import storage
 from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings, get_council_config
 from .config import COUNCIL_TYPE_PREMIUM, VALID_COUNCIL_TYPES
+from .model_catalog import (
+    filter_models,
+    find_model,
+    get_models,
+    normalize_model,
+    validate_custom_council_from_catalog,
+)
 
 app = FastAPI(title="LLM Council API")
 logger = logging.getLogger(__name__)
@@ -73,6 +80,12 @@ class SendMessageRequest(BaseModel):
     )
 
 
+class ValidateCouncilRequest(BaseModel):
+    """Request to validate custom council model choices."""
+    models: List[str]
+    chairman_model: Optional[str] = None
+
+
 class ConversationMetadata(BaseModel):
     """Conversation metadata for list view."""
     id: str
@@ -110,6 +123,55 @@ def normalize_council_type(council_type: str) -> str:
 async def root():
     """Health check endpoint."""
     return {"status": "ok", "service": "LLM Council API"}
+
+
+@app.get("/api/models")
+async def list_models(
+    free_only: bool = False,
+    text_only: bool = True,
+    supports: Optional[str] = None,
+    min_context: Optional[int] = None,
+    sort: str = "pricing-low-to-high",
+    q: Optional[str] = None,
+    refresh: bool = False,
+):
+    """List OpenRouter models for custom council selection."""
+    support_filters = [item.strip() for item in supports.split(",")] if supports else []
+    models = await get_models(refresh=refresh)
+    filtered = filter_models(
+        models,
+        free_only=free_only,
+        text_only=text_only,
+        supports=support_filters,
+        min_context=min_context,
+        query=q,
+        sort=sort,
+    )
+    return {
+        "count": len(filtered),
+        "models": [normalize_model(model) for model in filtered],
+    }
+
+
+@app.get("/api/models/detail")
+async def get_model_detail(model_id: str = Query(..., description="OpenRouter model id")):
+    """Get one OpenRouter model by id."""
+    models = await get_models()
+    model = find_model(models, model_id)
+    if model is None:
+        raise HTTPException(status_code=404, detail="Model not found")
+    return normalize_model(model)
+
+
+@app.post("/api/councils/validate")
+async def validate_custom_council(request: ValidateCouncilRequest):
+    """Validate a custom council selection."""
+    models = await get_models()
+    return validate_custom_council_from_catalog(
+        models,
+        request.models,
+        request.chairman_model,
+    )
 
 
 @app.get("/api/conversations", response_model=List[ConversationMetadata])
