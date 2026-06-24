@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
 import { api } from './api';
@@ -11,35 +11,35 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Load conversations on mount
-  useEffect(() => {
-    loadConversations();
-  }, []);
-
-  // Load conversation details when selected
-  useEffect(() => {
-    if (currentConversationId) {
-      loadConversation(currentConversationId);
-    }
-  }, [currentConversationId]);
-
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     try {
       const convs = await api.listConversations();
       setConversations(convs);
     } catch (error) {
       console.error('Failed to load conversations:', error);
     }
-  };
+  }, []);
 
-  const loadConversation = async (id) => {
+  const loadConversation = useCallback(async (id) => {
     try {
       const conv = await api.getConversation(id);
       setCurrentConversation(conv);
     } catch (error) {
       console.error('Failed to load conversation:', error);
     }
-  };
+  }, []);
+
+  // Load conversations on mount
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
+
+  // Load conversation details when selected
+  useEffect(() => {
+    if (currentConversationId) {
+      loadConversation(currentConversationId);
+    }
+  }, [currentConversationId, loadConversation]);
 
   const handleNewConversation = async () => {
     try {
@@ -78,7 +78,7 @@ function App() {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  const handleSendMessage = async (content, councilType) => {
+  const handleSendMessage = async (content, councilType, customCouncil = null) => {
     if (!currentConversationId) return;
 
     setIsLoading(true);
@@ -98,6 +98,7 @@ function App() {
         stage3: null,
         metadata: null,
         council_type: councilType,
+        custom_council: customCouncil,
         loading: {
           stage1: false,
           stage2: false,
@@ -167,6 +168,8 @@ function App() {
                   lastMsg.stage2 = event.data || [];
                   lastMsg.metadata = event.metadata || {};
                   lastMsg.council_type = event.metadata?.council_type || councilType;
+                  lastMsg.custom_council = event.metadata?.custom_council || customCouncil;
+                  lastMsg.model_metadata = event.metadata?.model_metadata;
                   lastMsg.loading = lastMsg.loading || {};
                   lastMsg.loading.stage2 = false;
                 }
@@ -229,7 +232,7 @@ function App() {
           console.error('Error processing SSE event:', error, eventType, event);
           setIsLoading(false);
         }
-      }, councilType);
+      }, councilType, customCouncil);
     } catch (error) {
       console.error('Failed to send message:', error);
       // Remove optimistic messages on error

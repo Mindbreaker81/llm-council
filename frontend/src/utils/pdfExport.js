@@ -45,29 +45,6 @@ function markdownToText(markdown) {
 }
 
 /**
- * Converts markdown to basic formatted text for pdfmake
- * Returns an array of text objects with styles
- */
-function markdownToPdfText(markdown) {
-  if (!markdown) return '';
-  const text = markdownToText(markdown);
-  // Split into paragraphs and lines
-  const lines = text.split('\n').filter(line => line.trim());
-  const result = [];
-  
-  lines.forEach((line, index) => {
-    if (line.trim()) {
-      result.push(line);
-      if (index < lines.length - 1) {
-        result.push({ text: '\n' });
-      }
-    }
-  });
-  
-  return result.length > 0 ? result : text;
-}
-
-/**
  * Gets short model name (without provider prefix)
  */
 function getShortModelName(model) {
@@ -81,7 +58,8 @@ function getCouncilTypeDisplay(councilType) {
   const types = {
     premium: { emoji: '💎', name: 'Premium' },
     economic: { emoji: '💰', name: 'Economic' },
-    free: { emoji: '🆓', name: 'Free' }
+    free: { emoji: '🆓', name: 'Free' },
+    custom: { emoji: '⚙', name: 'Custom' }
   };
   return types[councilType] || { emoji: '', name: councilType || 'Premium' };
 }

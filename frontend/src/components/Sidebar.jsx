@@ -1,5 +1,12 @@
-import { useState, useEffect } from 'react';
 import './Sidebar.css';
+
+const getCouncilTypeLabel = (councilType) => {
+  if (councilType === 'premium') return '💎 premium';
+  if (councilType === 'economic') return '💰 economic';
+  if (councilType === 'free') return '🆓 free';
+  if (councilType === 'custom') return '⚙ custom';
+  return councilType;
+};
 
 export default function Sidebar({
   conversations,
@@ -8,7 +15,6 @@ export default function Sidebar({
   onNewConversation,
   onDeleteConversation,
   isOpen,
-  onClose,
 }) {
   const handleDelete = (e, id) => {
     e.stopPropagation();
@@ -46,7 +52,7 @@ export default function Sidebar({
                   {conv.message_count} messages
                   {conv.council_type && (
                     <span className="council-type-badge">
-                      {conv.council_type === 'premium' ? '💎' : conv.council_type === 'economic' ? '💰' : '🆓'} {conv.council_type}
+                      {getCouncilTypeLabel(conv.council_type)}
                     </span>
                   )}
                 </div>

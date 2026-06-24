@@ -13,6 +13,17 @@ const getApiBase = () => {
 
 const API_BASE = getApiBase();
 
+const buildQuery = (params) => {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      query.set(key, value);
+    }
+  });
+  const text = query.toString();
+  return text ? `?${text}` : '';
+};
+
 export const api = {
   /**
    * List all conversations.
@@ -72,9 +83,42 @@ export const api = {
   },
 
   /**
+   * List OpenRouter models for custom council selection.
+   */
+  async listModels(params = {}) {
+    const response = await fetch(`${API_BASE}/api/models${buildQuery(params)}`);
+    if (!response.ok) {
+      throw new Error('Failed to list models');
+    }
+    return response.json();
+  },
+
+  /**
+   * Validate a custom council selection.
+   */
+  async validateCouncil(models, chairmanModel) {
+    const response = await fetch(`${API_BASE}/api/councils/validate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ models, chairman_model: chairmanModel }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to validate council');
+    }
+    return response.json();
+  },
+
+  /**
    * Send a message in a conversation.
    */
-  async sendMessage(conversationId, content, councilType = 'premium') {
+  async sendMessage(conversationId, content, councilType = 'premium', customCouncil = null) {
+    const body = { content, council_type: councilType };
+    if (customCouncil) {
+      body.custom_council = customCouncil;
+    }
+
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/message`,
       {
@@ -82,7 +126,7 @@ export const api = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content, council_type: councilType }),
+        body: JSON.stringify(body),
       }
     );
     if (!response.ok) {
@@ -99,7 +143,12 @@ export const api = {
    * @param {string} councilType - Type of council to use ("premium" or "economic")
    * @returns {Promise<void>}
    */
-  async sendMessageStream(conversationId, content, onEvent, councilType = 'premium') {
+  async sendMessageStream(conversationId, content, onEvent, councilType = 'premium', customCouncil = null) {
+    const body = { content, council_type: councilType };
+    if (customCouncil) {
+      body.custom_council = customCouncil;
+    }
+
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/message/stream`,
       {
@@ -107,7 +156,7 @@ export const api = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content, council_type: councilType }),
+        body: JSON.stringify(body),
       }
     );
 
