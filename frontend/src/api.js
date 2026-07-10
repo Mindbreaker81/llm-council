@@ -8,6 +8,9 @@ import { createSseEventParser } from './utils/sse';
 // If running on localhost, use localhost:8001
 // If running on a remote IP/domain, use that IP/domain:8001
 const getApiBase = () => {
+  if (import.meta.env?.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
   return `${protocol}//${hostname}:8001`;
@@ -156,7 +159,7 @@ export const api = {
    * @param {string} councilType - Type of council to use ("premium" or "economic")
    * @returns {Promise<void>}
    */
-  async sendMessageStream(conversationId, content, onEvent, councilType = 'premium', customCouncil = null) {
+  async sendMessageStream(conversationId, content, onEvent, councilType = 'premium', customCouncil = null, abortSignal = null) {
     const body = { content, council_type: councilType };
     if (customCouncil) {
       body.custom_council = customCouncil;
@@ -170,11 +173,13 @@ export const api = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
+        signal: abortSignal,
       }
     );
 
     if (!response.ok) {
-      throw new Error('Failed to send message');
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`Failed to send message: ${response.status} ${errorText}`);
     }
 
     const reader = response.body.getReader();

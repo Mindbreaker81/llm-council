@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
 import { api } from './api';
@@ -11,6 +11,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const abortControllerRef = useRef(null);
 
   const loadConversations = useCallback(async () => {
     try {
@@ -35,8 +36,12 @@ function App() {
     loadConversations();
   }, [loadConversations]);
 
-  // Load conversation details when selected
+  // Load conversation details when selected, and abort any active stream.
   useEffect(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     if (currentConversationId) {
       loadConversation(currentConversationId);
     }
@@ -89,8 +94,24 @@ function App() {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
+  const updateLastMessage = (prev, updater) => {
+    if (!prev || !prev.messages) return prev;
+    const messages = [...prev.messages];
+    const lastMsg = { ...messages[messages.length - 1] };
+    messages[messages.length - 1] = lastMsg;
+    updater(lastMsg);
+    return { ...prev, messages };
+  };
+
   const handleSendMessage = async (content, councilType, customCouncil = null) => {
     if (!currentConversationId) return;
+
+    // Abort any previous stream before starting a new one.
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     setIsLoading(true);
     try {
@@ -125,163 +146,153 @@ function App() {
       }));
 
       // Send message with streaming
-      await api.sendMessageStream(currentConversationId, content, (eventType, event) => {
-        try {
-          switch (eventType) {
-            case 'stage1_start':
-              setCurrentConversation((prev) => {
-                if (!prev || !prev.messages) return prev;
-                const messages = [...prev.messages];
-                const lastMsg = messages[messages.length - 1];
-                if (lastMsg) {
-                  lastMsg.loading = lastMsg.loading || {};
-                  lastMsg.loading.stage1 = true;
-                  lastMsg.progressText = 'Querying council models...';
-                }
-                return { ...prev, messages };
-              });
-              break;
+      await api.sendMessageStream(
+        currentConversationId,
+        content,
+        (eventType, event) => {
+          try {
+            switch (eventType) {
+              case 'stage1_start':
+                setCurrentConversation((prev) =>
+                  updateLastMessage(prev, (lastMsg) => {
+                    lastMsg.loading = lastMsg.loading || {};
+                    lastMsg.loading.stage1 = true;
+                    lastMsg.progressText = 'Querying council models...';
+                  })
+                );
+                break;
 
-            case 'stage1_complete':
-              console.log('Stage 1 complete event received:', event.data);
-              setCurrentConversation((prev) => {
-                if (!prev || !prev.messages) return prev;
-                const messages = [...prev.messages];
-                const lastMsg = messages[messages.length - 1];
-                if (lastMsg) {
-                  lastMsg.stage1 = event.data || [];
-                  if (event.council_type) lastMsg.council_type = event.council_type;
-                  lastMsg.loading = lastMsg.loading || {};
-                  lastMsg.loading.stage1 = false;
-                  lastMsg.progressText = `Collected ${(event.data || []).length} model responses`;
-                }
-                console.log('Updated message with stage1:', lastMsg?.stage1);
-                return { ...prev, messages };
-              });
-              break;
+              case 'stage1_complete':
+                setCurrentConversation((prev) =>
+                  updateLastMessage(prev, (lastMsg) => {
+                    lastMsg.stage1 = event.data || [];
+                    if (event.council_type) lastMsg.council_type = event.council_type;
+                    lastMsg.loading = lastMsg.loading || {};
+                    lastMsg.loading.stage1 = false;
+                    lastMsg.progressText = `Collected ${(event.data || []).length} model responses`;
+                  })
+                );
+                break;
 
-            case 'stage2_start':
-              setCurrentConversation((prev) => {
-                if (!prev || !prev.messages) return prev;
-                const messages = [...prev.messages];
-                const lastMsg = messages[messages.length - 1];
-                if (lastMsg) {
-                  lastMsg.loading = lastMsg.loading || {};
-                  lastMsg.loading.stage2 = true;
-                  const responseCount = lastMsg.stage1?.length || 0;
-                  lastMsg.progressText = `Reviewing ${responseCount} responses`;
-                }
-                return { ...prev, messages };
-              });
-              break;
+              case 'stage2_start':
+                setCurrentConversation((prev) =>
+                  updateLastMessage(prev, (lastMsg) => {
+                    lastMsg.loading = lastMsg.loading || {};
+                    lastMsg.loading.stage2 = true;
+                    const responseCount = lastMsg.stage1?.length || 0;
+                    lastMsg.progressText = `Reviewing ${responseCount} responses`;
+                  })
+                );
+                break;
 
-            case 'stage2_complete':
-              setCurrentConversation((prev) => {
-                if (!prev || !prev.messages) return prev;
-                const messages = [...prev.messages];
-                const lastMsg = messages[messages.length - 1];
-                if (lastMsg) {
-                  lastMsg.stage2 = event.data || [];
-                  lastMsg.metadata = event.metadata || {};
-                  lastMsg.council_type = event.metadata?.council_type || councilType;
-                  lastMsg.custom_council = event.metadata?.custom_council || customCouncil;
-                  lastMsg.model_metadata = event.metadata?.model_metadata;
-                  lastMsg.loading = lastMsg.loading || {};
-                  lastMsg.loading.stage2 = false;
-                  lastMsg.progressText = 'Peer review complete';
-                }
-                return { ...prev, messages };
-              });
-              break;
+              case 'stage2_complete':
+                setCurrentConversation((prev) =>
+                  updateLastMessage(prev, (lastMsg) => {
+                    lastMsg.stage2 = event.data || [];
+                    lastMsg.metadata = event.metadata || {};
+                    lastMsg.council_type = event.metadata?.council_type || councilType;
+                    lastMsg.custom_council = event.metadata?.custom_council || customCouncil;
+                    lastMsg.model_metadata = event.metadata?.model_metadata;
+                    lastMsg.loading = lastMsg.loading || {};
+                    lastMsg.loading.stage2 = false;
+                    lastMsg.progressText = 'Peer review complete';
+                  })
+                );
+                break;
 
-            case 'stage3_start':
-              setCurrentConversation((prev) => {
-                if (!prev || !prev.messages) return prev;
-                const messages = [...prev.messages];
-                const lastMsg = messages[messages.length - 1];
-                if (lastMsg) {
-                  lastMsg.loading = lastMsg.loading || {};
-                  lastMsg.loading.stage3 = true;
-                  const orchestrator = lastMsg.custom_council?.chairman_model || lastMsg.metadata?.custom_council?.chairman_model;
-                  lastMsg.progressText = orchestrator
-                    ? `Synthesizing final answer with ${orchestrator}`
-                    : 'Synthesizing final answer';
-                }
-                return { ...prev, messages };
-              });
-              break;
+              case 'stage3_start':
+                setCurrentConversation((prev) =>
+                  updateLastMessage(prev, (lastMsg) => {
+                    lastMsg.loading = lastMsg.loading || {};
+                    lastMsg.loading.stage3 = true;
+                    const orchestrator =
+                      lastMsg.custom_council?.chairman_model ||
+                      lastMsg.metadata?.custom_council?.chairman_model;
+                    lastMsg.progressText = orchestrator
+                      ? `Synthesizing final answer with ${orchestrator}`
+                      : 'Synthesizing final answer';
+                  })
+                );
+                break;
 
-            case 'stage3_complete':
-              setCurrentConversation((prev) => {
-                if (!prev || !prev.messages) return prev;
-                const messages = [...prev.messages];
-                const lastMsg = messages[messages.length - 1];
-                if (lastMsg) {
-                  lastMsg.stage3 = event.data || {};
-                  if (event.council_type) lastMsg.council_type = event.council_type;
-                  lastMsg.loading = lastMsg.loading || {};
-                  lastMsg.loading.stage3 = false;
-                  lastMsg.progressText = 'Final answer ready';
-                }
-                return { ...prev, messages };
-              });
-              break;
+              case 'stage3_complete':
+                setCurrentConversation((prev) =>
+                  updateLastMessage(prev, (lastMsg) => {
+                    lastMsg.stage3 = event.data || {};
+                    if (event.council_type) lastMsg.council_type = event.council_type;
+                    lastMsg.loading = lastMsg.loading || {};
+                    lastMsg.loading.stage3 = false;
+                    lastMsg.progressText = 'Final answer ready';
+                  })
+                );
+                break;
 
-            case 'title_complete':
-              setCurrentConversation((prev) => ({
-                ...prev,
-                title: event.data?.title || prev?.title,
-              }));
-              loadConversations();
-              setIsLoading(false);
-              break;
+              case 'title_complete':
+                setCurrentConversation((prev) => ({
+                  ...prev,
+                  title: event.data?.title || prev?.title,
+                }));
+                loadConversations();
+                setIsLoading(false);
+                break;
 
-            case 'complete':
-              // Stream complete, reload conversations list
-              loadConversations();
-              setIsLoading(false);
-              break;
+              case 'complete':
+                // Stream complete, reload conversations list
+                loadConversations();
+                setIsLoading(false);
+                break;
 
-            case 'error':
-              console.error('Stream error:', event.message);
-              setCurrentConversation((prev) => {
-                if (!prev || !prev.messages) return prev;
-                const messages = [...prev.messages];
-                const lastMsg = messages[messages.length - 1];
-                if (lastMsg?.role === 'assistant') {
-                  lastMsg.stage3 = {
-                    model: 'error',
-                    response: `Error: ${event.message}`,
-                  };
-                  lastMsg.loading = {
-                    stage1: false,
-                    stage2: false,
-                    stage3: false,
-                  };
-                  lastMsg.progressText = 'Council failed';
-                }
-                return { ...prev, messages };
-              });
-              loadConversations();
-              setIsLoading(false);
-              break;
+              case 'error':
+                console.error('Stream error:', event.message);
+                setCurrentConversation((prev) =>
+                  updateLastMessage(prev, (lastMsg) => {
+                    if (lastMsg?.role === 'assistant') {
+                      lastMsg.stage3 = {
+                        model: 'error',
+                        response: `Error: ${event.message}`,
+                      };
+                      lastMsg.loading = {
+                        stage1: false,
+                        stage2: false,
+                        stage3: false,
+                      };
+                      lastMsg.progressText = 'Council failed';
+                    }
+                  })
+                );
+                loadConversations();
+                setIsLoading(false);
+                break;
 
-            default:
-              console.log('Unknown event type:', eventType);
+              default:
+                // Unknown event type, ignore
+            }
+          } catch (error) {
+            console.error('Error processing SSE event:', error, eventType, event);
+            setIsLoading(false);
           }
-        } catch (error) {
-          console.error('Error processing SSE event:', error, eventType, event);
-          setIsLoading(false);
-        }
-      }, councilType, customCouncil);
+        },
+        councilType,
+        customCouncil,
+        controller.signal
+      );
     } catch (error) {
-      console.error('Failed to send message:', error);
-      // Remove optimistic messages on error
-      setCurrentConversation((prev) => ({
-        ...prev,
-        messages: prev.messages.slice(0, -2),
-      }));
-      setIsLoading(false);
+      if (error.name === 'AbortError') {
+        // User aborted the stream (e.g., by switching conversations). Clean up silently.
+        setIsLoading(false);
+      } else {
+        console.error('Failed to send message:', error);
+        // Remove optimistic messages on error
+        setCurrentConversation((prev) => ({
+          ...prev,
+          messages: prev.messages.slice(0, -2),
+        }));
+        setIsLoading(false);
+      }
+    } finally {
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
     }
   };
 

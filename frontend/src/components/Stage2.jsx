@@ -6,10 +6,11 @@ function deAnonymizeText(text, labelToModel) {
   if (!labelToModel) return text;
 
   let result = text;
-  // Replace each "Response X" with the actual model name
+  // Replace each "Response X" with the actual model name, matching whole labels only.
   Object.entries(labelToModel).forEach(([label, model]) => {
     const modelShortName = model.split('/')[1] || model;
-    result = result.replace(new RegExp(label, 'g'), `**${modelShortName}**`);
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    result = result.replace(new RegExp(`\\b${escaped}\\b`, 'g'), `**${modelShortName}**`);
   });
   return result;
 }
@@ -84,7 +85,7 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
                   {agg.model.split('/')[1] || agg.model}
                 </span>
                 <span className="rank-score">
-                  Avg: {agg.average_rank.toFixed(2)}
+                  Avg: {agg.average_rank != null ? agg.average_rank.toFixed(2) : 'N/A'}
                 </span>
                 <span className="rank-count">
                   ({agg.rankings_count} votes)

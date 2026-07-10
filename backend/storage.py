@@ -4,7 +4,7 @@ import json
 import os
 import threading
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 from contextlib import contextmanager
 from typing import List, Dict, Any, Optional
 from pathlib import Path
@@ -74,7 +74,7 @@ def create_conversation(conversation_id: str, council_type: str = COUNCIL_TYPE_P
 
     conversation = {
         "id": conversation_id,
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "title": "New Conversation",
         "messages": [],
         "council_type": council_type

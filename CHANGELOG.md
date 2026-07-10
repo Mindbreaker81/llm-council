@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.5.0] - 2026-07-11
+
+### Added
+- **Startup validation**: the backend now fails fast if `OPENROUTER_API_KEY` is missing.
+- **Structured logging**: root logging configured for consistent `INFO+` output.
+- **Health endpoint**: `GET /health` reports backend status and version.
+- **Custom council cost guardrail**: optional `MAX_CUSTOM_COUNCIL_COST_USD` rejects expensive selections before sending.
+- **Configurable title model**: `TITLE_GENERATION_MODEL` env var allows overriding the model used for auto-generated conversation titles.
+- **Frontend tests**: added coverage for API client, SSE parser edge cases and custom council selector.
+- **Backend tests**: added coverage for OpenRouter client, full council orchestration, ranking parser and endpoint integration.
+
+### Changed
+- **Version alignment**: `pyproject.toml` and `frontend/package.json` bumped to `2.5.0`.
+- **Council type validation**: invalid `council_type` now returns `400` instead of silently defaulting to `premium`.
+- **CORS hardening**: HTTP methods and headers are no longer wildcarded; `ALLOWED_ORIGINS` and `ALLOW_ORIGIN_REGEX` are configurable via environment variables.
+- **Custom summarizer**: `summarize_stage2_results` now uses a model from the active council instead of a hardcoded model.
+- **Frontend state management**: `App.jsx` streaming updates are now immutable and support stream cancellation.
+- **API base URL**: frontend API base is configurable via `VITE_API_BASE_URL`.
+- **Custom council UI**: `ChatInterface.jsx` split into `CouncilTypeSelector` and `CustomCouncilPanel` components.
+
+### Fixed
+- **Storage timestamps**: `datetime.utcnow()` replaced with timezone-aware `datetime.now(timezone.utc)`.
+- **Data directory**: `DATA_DIR` now resolves to an absolute path from the project root.
+- **Ranking parser**: `parse_ranking_from_text` now uses word boundaries and handles edge cases more reliably.
+- **PDF markdown**: `markdownToText` is now safe if `marked.parse` returns a Promise.
+- **SSE processing**: removed leftover debug `console.log` statements from streaming handler.
+
 ## [2.4.0] - 2026-06-24
 
 ### Added

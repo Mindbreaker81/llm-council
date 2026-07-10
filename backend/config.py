@@ -70,5 +70,28 @@ CHAIRMAN_MODEL = CHAIRMAN_MODEL_PREMIUM
 # OpenRouter API endpoint
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# Data directory for conversation storage
-DATA_DIR = "data/conversations"
+# Model used for automatic title generation (fast and cheap)
+TITLE_GENERATION_MODEL = os.getenv("TITLE_GENERATION_MODEL", "google/gemini-2.5-flash")
+
+# CORS security
+# Comma-separated list of allowed origins; use this to lock down remote access.
+ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS", "")
+# Default regex for local development networks. Set to empty to disable.
+ALLOW_ORIGIN_REGEX_ENV = os.getenv(
+    "ALLOW_ORIGIN_REGEX",
+    r"https?://("
+    r"localhost|127\.0\.0\.1|0\.0\.0\.0|"
+    r"10\.\d{1,3}\.\d{1,3}\.\d{1,3}|"
+    r"192\.168\.\d{1,3}\.\d{1,3}|"
+    r"172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}"
+    r")(:\d+)?",
+)
+
+# Cost guardrail for custom councils (USD)
+MAX_CUSTOM_COUNCIL_COST_USD = float(os.getenv("MAX_CUSTOM_COUNCIL_COST_USD", "5.0"))
+
+# Project paths
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Data directory for conversation storage (absolute, so cwd does not matter)
+DATA_DIR = os.path.join(BASE_DIR, "data", "conversations")

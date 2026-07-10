@@ -32,8 +32,8 @@ marked.setOptions({
 function markdownToText(markdown) {
   if (!markdown) return '';
   try {
-    // First convert markdown to HTML
-    const html = marked.parse(markdown);
+    // Use { async: false } to keep markdownToText synchronous even with marked v15+
+    const html = marked.parse(markdown, { async: false });
     // Then convert HTML to plain text
     const div = document.createElement('div');
     div.innerHTML = html;

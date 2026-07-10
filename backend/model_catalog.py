@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Sequence
 
 import httpx
 
-from .config import OPENROUTER_API_KEY
+from .config import OPENROUTER_API_KEY, MAX_CUSTOM_COUNCIL_COST_USD
 
 OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 OPENROUTER_USER_MODELS_URL = "https://openrouter.ai/api/v1/models/user"
@@ -174,26 +174,59 @@ def find_model(models: Sequence[Dict[str, Any]], model_id: str) -> Optional[Dict
     return next((model for model in models if model.get("id") == model_id), None)
 
 
+def _estimate_call_cost(
+    model: Dict[str, Any],
+    input_tokens: int,
+    output_tokens: int,
+) -> Decimal:
+    """Return the estimated cost for one prompt+completion call."""
+    pricing = model.get("pricing") or {}
+    return (
+        parse_price(pricing.get("prompt")) * input_tokens
+        + parse_price(pricing.get("completion")) * output_tokens
+        + parse_price(pricing.get("request"))
+    )
+
+
 def estimate_council_cost(
     selected_models: Sequence[Dict[str, Any]],
     chairman_model: Dict[str, Any],
     input_tokens: int = 1000,
     output_tokens: int = 1000,
 ) -> Dict[str, Any]:
-    """Estimate rough 2N+1 council cost for display guardrails."""
+    """Estimate rough 2N+1 council cost for display guardrails.
+
+    Stage 1 and Stage 2 each call every selected model once. Stage 3 calls the
+    chairman once. If the chairman is also a selected model, it is counted for
+    all three calls as expected.
+    """
     total = Decimal("0")
     calls = []
 
-    for model in [*selected_models, *selected_models, chairman_model]:
-        pricing = model.get("pricing") or {}
-        call_cost = (
-            parse_price(pricing.get("prompt")) * input_tokens
-            + parse_price(pricing.get("completion")) * output_tokens
-            + parse_price(pricing.get("request"))
-        )
+    for model in selected_models:
+        call_cost = _estimate_call_cost(model, input_tokens, output_tokens)
         total += call_cost
         calls.append({
             "model": model.get("id"),
+            "stage": "stage1",
+            "estimated_cost_usd": str(call_cost),
+        })
+
+    for model in selected_models:
+        call_cost = _estimate_call_cost(model, input_tokens, output_tokens)
+        total += call_cost
+        calls.append({
+            "model": model.get("id"),
+            "stage": "stage2",
+            "estimated_cost_usd": str(call_cost),
+        })
+
+    if chairman_model:
+        call_cost = _estimate_call_cost(chairman_model, input_tokens, output_tokens)
+        total += call_cost
+        calls.append({
+            "model": chairman_model.get("id"),
+            "stage": "stage3",
             "estimated_cost_usd": str(call_cost),
         })
 
@@ -263,6 +296,13 @@ def validate_custom_council_from_catalog(
     if chairman_model and chairman_model not in snapshot_source:
         snapshot_source.append(chairman_model)
 
+    estimated_cost = estimate_council_cost(selected_models, chairman_model) if chairman_model else None
+    if estimated_cost and parse_price(estimated_cost["estimated_total_usd"]) > Decimal(str(MAX_CUSTOM_COUNCIL_COST_USD)):
+        errors.append(
+            f"Estimated cost ${estimated_cost['estimated_total_usd']} exceeds the "
+            f"maximum allowed ${MAX_CUSTOM_COUNCIL_COST_USD:.2f}. Reduce the number of models or choose cheaper ones."
+        )
+
     return {
         "valid": not errors,
         "errors": errors,
@@ -272,5 +312,5 @@ def validate_custom_council_from_catalog(
         "model_ids": [model["id"] for model in selected_models],
         "chairman_model_id": chairman_model.get("id") if chairman_model else effective_chairman_id,
         "model_metadata": snapshot_models(snapshot_source),
-        "estimated_cost": estimate_council_cost(selected_models, chairman_model) if chairman_model else None,
+        "estimated_cost": estimated_cost,
     }

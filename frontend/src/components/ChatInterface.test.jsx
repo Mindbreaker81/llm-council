@@ -62,7 +62,7 @@ describe('ChatInterface', () => {
       />
     );
 
-    expect(await screen.findByText('⚙ Custom')).toBeInTheDocument();
+    expect(await screen.findAllByText('⚙ Custom')).toHaveLength(2);
     expect(
       screen.getByText('Select 2-8 models for Stage 1 and peer review.')
     ).toBeInTheDocument();

@@ -1,5 +1,6 @@
 """OpenRouter API client for making LLM requests."""
 
+import asyncio
 import httpx
 import logging
 import re
@@ -57,6 +58,24 @@ def get_fallback_model(model_id: str) -> Optional[str]:
     return MODEL_FALLBACK_MAP.get(model_id)
 
 
+async def _post_openrouter(
+    model: str,
+    messages: List[Dict[str, str]],
+    timeout: float
+) -> Dict[str, Any]:
+    """Send a single request to OpenRouter and return the parsed JSON."""
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {"model": model, "messages": messages}
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.post(OPENROUTER_API_URL, headers=headers, json=payload)
+        response.raise_for_status()
+        return response.json()
+
+
 async def query_model(
     model: str,
     messages: List[Dict[str, str]],
@@ -80,34 +99,21 @@ async def query_model(
     if not OPENROUTER_API_KEY:
         raise RuntimeError("OPENROUTER_API_KEY is not configured")
 
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json",
-    }
+    models_to_try = [model]
+    if use_fallback:
+        fallback_model = get_fallback_model(model)
+        if fallback_model:
+            models_to_try.append(fallback_model)
 
-    payload = {
-        "model": model,
-        "messages": messages,
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(
-                OPENROUTER_API_URL,
-                headers=headers,
-                json=payload
-            )
-            response.raise_for_status()
-
-            data = response.json()
+    last_error: Optional[Exception] = None
+    for i, attempt_model in enumerate(models_to_try):
+        try:
+            data = await _post_openrouter(attempt_model, messages, timeout)
             message = data['choices'][0]['message']
 
             original_content = message.get('content', '')
             reasoning_details = message.get('reasoning_details')
-            
-            # Extract final content if requested
-            # When extract_final_content_flag=False, we still want to return the original content
-            # as both content and original_content for consistency
+
             if extract_final_content_flag and original_content:
                 final_content = extract_final_content(original_content)
             else:
@@ -118,52 +124,25 @@ async def query_model(
                 'original_content': original_content,
                 'reasoning_details': reasoning_details
             }
-            
+
             logger.debug(
                 "%s returned %s original chars and %s final chars",
-                model,
+                attempt_model,
                 len(original_content) if original_content else 0,
                 len(final_content) if final_content else 0
             )
-            
+
             return result
 
-    except httpx.HTTPStatusError as e:
-        error_msg = f"HTTP {e.response.status_code}: {e.response.text[:200] if e.response.text else 'No response body'}"
-        logger.warning("Error querying model %s: %s", model, error_msg)
-        
-        # Try fallback if enabled and model is a free model
-        if use_fallback:
-            fallback_model = get_fallback_model(model)
-            if fallback_model:
-                logger.info("Attempting fallback from %s to %s", model, fallback_model)
-                return await query_model(
-                    fallback_model,
-                    messages,
-                    timeout,
-                    extract_final_content_flag,
-                    use_fallback=False  # Don't recurse on fallback
-                )
-        
-        return None
-    except Exception as e:
-        error_msg = str(e)
-        logger.warning("Error querying model %s: %s", model, error_msg)
-        
-        # Try fallback if enabled and model is a free model
-        if use_fallback:
-            fallback_model = get_fallback_model(model)
-            if fallback_model:
-                logger.info("Attempting fallback from %s to %s", model, fallback_model)
-                return await query_model(
-                    fallback_model,
-                    messages,
-                    timeout,
-                    extract_final_content_flag,
-                    use_fallback=False  # Don't recurse on fallback
-                )
-        
-        return None
+        except RuntimeError:
+            raise
+        except Exception as e:
+            last_error = e
+            logger.warning("Error querying model %s: %s", attempt_model, e)
+            if i < len(models_to_try) - 1:
+                logger.info("Attempting fallback from %s to %s", attempt_model, models_to_try[i + 1])
+
+    return None
 
 
 async def query_models_parallel(
@@ -184,8 +163,6 @@ async def query_models_parallel(
     Returns:
         Dict mapping model identifier to response dict (or None if failed)
     """
-    import asyncio
-
     # Create tasks for all models
     tasks = [
         query_model(

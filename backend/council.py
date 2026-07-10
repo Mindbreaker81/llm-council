@@ -1,6 +1,7 @@
 """3-stage LLM Council orchestration."""
 
 import logging
+import re
 from typing import List, Dict, Any, Tuple, Optional
 from .openrouter import query_models_parallel, query_model
 from .config import (
@@ -16,6 +17,7 @@ from .config import (
     COUNCIL_TYPE_CUSTOM,
     COUNCIL_MODELS,
     CHAIRMAN_MODEL,
+    TITLE_GENERATION_MODEL,
 )
 
 logger = logging.getLogger(__name__)
@@ -43,8 +45,10 @@ def get_council_config(
         return COUNCIL_MODELS_ECONOMIC, CHAIRMAN_MODEL_ECONOMIC
     elif council_type == COUNCIL_TYPE_FREE:
         return COUNCIL_MODELS_FREE, CHAIRMAN_MODEL_FREE
-    else:
+    elif council_type == COUNCIL_TYPE_PREMIUM:
         return COUNCIL_MODELS_PREMIUM, CHAIRMAN_MODEL_PREMIUM
+
+    raise ValueError(f"Invalid council type: {council_type}")
 
 
 async def stage1_collect_responses(
@@ -290,30 +294,27 @@ def parse_ranking_from_text(ranking_text: str) -> List[str]:
         ranking_text: The full text response from the model
 
     Returns:
-        List of response labels in ranked order
+        List of response labels (e.g., "Response A") in ranked order
     """
-    import re
+    if not ranking_text:
+        return []
 
-    # Look for "FINAL RANKING:" section
-    if "FINAL RANKING:" in ranking_text:
-        # Extract everything after "FINAL RANKING:"
-        parts = ranking_text.split("FINAL RANKING:")
-        if len(parts) >= 2:
-            ranking_section = parts[1]
-            # Try to extract numbered list format (e.g., "1. Response A")
-            # This pattern looks for: number, period, optional space, "Response X"
-            numbered_matches = re.findall(r'\d+\.\s*Response [A-Z]', ranking_section)
-            if numbered_matches:
-                # Extract just the "Response X" part
-                return [re.search(r'Response [A-Z]', m).group() for m in numbered_matches]
+    # Try to find an explicit "FINAL RANKING:" section first.
+    section_match = re.search(r'FINAL RANKING\s*:', ranking_text, re.IGNORECASE)
+    if section_match:
+        section = ranking_text[section_match.end():]
+        # Numbered list such as "1. Response A", "2. Response B".
+        labels = re.findall(r'\d+\.\s*Response\s+([A-Z]+)\b', section)
+        if labels:
+            return [f"Response {label}" for label in labels]
+        # Fallback: any "Response X" label in the ranking section.
+        labels = re.findall(r'\bResponse\s+([A-Z]+)\b', section)
+        if labels:
+            return [f"Response {label}" for label in labels]
 
-            # Fallback: Extract all "Response X" patterns in order
-            matches = re.findall(r'Response [A-Z]', ranking_section)
-            return matches
-
-    # Fallback: try to find any "Response X" patterns in order
-    matches = re.findall(r'Response [A-Z]', ranking_text)
-    return matches
+    # Final fallback: look for any "Response X" label in the whole text.
+    labels = re.findall(r'\bResponse\s+([A-Z]+)\b', ranking_text)
+    return [f"Response {label}" for label in labels]
 
 
 def estimate_token_count(text: str) -> int:
@@ -352,27 +353,36 @@ def check_context_limits(
 
 async def summarize_stage2_results(
     stage2_results: List[Dict[str, Any]],
-    label_to_model: Dict[str, str]
+    label_to_model: Dict[str, str],
+    summary_model: Optional[str] = None
 ) -> str:
     """
-    Summarize Stage 2 rankings into a concise "Bulletin of Ratings" using an economic model.
-    
-    This creates a hierarchical council that saves tokens while maintaining coherence.
-    Uses Mistral Small as recommended in the technical documentation.
-    
+    Summarize Stage 2 rankings into a concise "Bulletin of Ratings".
+
+    Uses a model from the active council so custom councils do not pull in
+    an external, hardcoded model. If no council model is available, returns a
+    simple fallback summary.
+
     Args:
         stage2_results: Rankings from each model
         label_to_model: Mapping from anonymous labels to model names
-        
+        summary_model: Optional model id to use for summarization.
+            Defaults to the first model in ``stage2_results``.
+
     Returns:
         Concise summary of rankings
     """
-    # Build full rankings text
+    if not stage2_results:
+        return "No peer rankings available to summarize."
+
+    if summary_model is None:
+        summary_model = stage2_results[0]["model"]
+
     rankings_text = "\n\n".join([
         f"Model: {result['model']}\nRanking: {result['ranking']}"
         for result in stage2_results
     ])
-    
+
     summary_prompt = f"""Summarize the following peer rankings from an LLM Council into a concise "Bulletin of Ratings".
 Focus on the key insights, patterns of agreement/disagreement, and overall assessment.
 Keep it brief but informative.
@@ -381,17 +391,13 @@ Rankings:
 {rankings_text}
 
 Concise Summary:"""
-    
+
     messages = [{"role": "user", "content": summary_prompt}]
-    
-    # Use Mistral Small for summarization (economic model as recommended)
-    summary_model = "mistralai/mistral-small-24b-instruct-2501"
     response = await query_model(summary_model, messages, timeout=60.0, extract_final_content_flag=True)
-    
+
     if response is None:
-        # Fallback: return a simple summary
         return f"Peer rankings from {len(stage2_results)} models. See full rankings for details."
-    
+
     return response.get('content', '')
 
 
@@ -407,17 +413,15 @@ def calculate_aggregate_rankings(
         label_to_model: Mapping from anonymous labels to model names
 
     Returns:
-        List of dicts with model name and average rank, sorted best to worst
+        List of dicts with model name and average rank, sorted best to worst.
+        Models that were not ranked by any peer get ``average_rank: None``.
     """
     from collections import defaultdict
 
-    # Track positions for each model
     model_positions = defaultdict(list)
 
     for ranking in stage2_results:
         ranking_text = ranking['ranking']
-
-        # Parse the ranking from the structured format
         parsed_ranking = parse_ranking_from_text(ranking_text)
 
         for position, label in enumerate(parsed_ranking, start=1):
@@ -425,9 +429,11 @@ def calculate_aggregate_rankings(
                 model_name = label_to_model[label]
                 model_positions[model_name].append(position)
 
-    # Calculate average position for each model
+    # Include every model that had a Stage 1 response, even if it was never ranked.
+    all_models = sorted({model for model in label_to_model.values()})
     aggregate = []
-    for model, positions in model_positions.items():
+    for model in all_models:
+        positions = model_positions.get(model, [])
         if positions:
             avg_rank = sum(positions) / len(positions)
             aggregate.append({
@@ -435,9 +441,15 @@ def calculate_aggregate_rankings(
                 "average_rank": round(avg_rank, 2),
                 "rankings_count": len(positions)
             })
+        else:
+            aggregate.append({
+                "model": model,
+                "average_rank": None,
+                "rankings_count": 0
+            })
 
-    # Sort by average rank (lower is better)
-    aggregate.sort(key=lambda x: x['average_rank'])
+    # Ranked models first (lower is better), then unranked models alphabetically.
+    aggregate.sort(key=lambda x: (x['average_rank'] is None, x['average_rank'] or 0, x['model']))
 
     return aggregate
 
@@ -461,8 +473,8 @@ Title:"""
 
     messages = [{"role": "user", "content": title_prompt}]
 
-    # Use gemini-2.5-flash for title generation (fast and cheap)
-    response = await query_model("google/gemini-2.5-flash", messages, timeout=30.0)
+    # Use a fast, cheap model for title generation (configurable via env)
+    response = await query_model(TITLE_GENERATION_MODEL, messages, timeout=30.0)
 
     if response is None:
         # Fallback to a generic title
